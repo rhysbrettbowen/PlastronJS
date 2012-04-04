@@ -1,4 +1,5 @@
 # PlastronJS #
+formerly goog.mvc
 
 PlastronJS is an MVC library which uses the Google Closure library for use with the Closure Compiler. I've decided to call it Plastron after the name of the underside of the turtle to mimic names of frameworks like Backbone and Spine but also because it's a good base to build upon.
 

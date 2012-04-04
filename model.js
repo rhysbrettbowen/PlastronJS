@@ -460,7 +460,7 @@ mvc.Model.prototype.dispose = function(opt_sync) {
 
 
 /**
- * @param {Function} handler function to handle errors
+ * @param {Function} fn handler function to handle errors.
  */
 mvc.Model.prototype.errorHandler = function(fn) {
   this.handleErr_ = fn;
