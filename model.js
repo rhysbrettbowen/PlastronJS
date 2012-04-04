@@ -308,6 +308,7 @@ mvc.Model.prototype.unset = function(key, opt_silent) {
  */
 mvc.Model.prototype.change = function() {
   this.dispatchEvent(goog.events.EventType.CHANGE);
+  this.prev_ = goog.object.clone(this.attr_);
 };
 
 
@@ -318,7 +319,18 @@ mvc.Model.prototype.change = function() {
  * @return {*} the previous value.
  */
 mvc.Model.prototype.prev = function(key) {
-  return goog.object.get(this.prev_, key, null);
+  if (this.schema_[key] && this.schema_[key].get) {
+    var get = this.schema_[key].get.apply(this, goog.array.map(
+        this.schema_[key].require || [], function(requireKey) {
+          if (requireKey === key) {
+            return this.prev_[key];
+          }
+          var get = this.get(requireKey);
+          return get;
+        },this));
+    return get;
+  }
+  return this.prev_[key];
 };
 
 
@@ -396,24 +408,10 @@ mvc.Model.prototype.setter = function(attr, fn) {
  * internally to decide which attributes to fire change functions for.
  */
 mvc.Model.prototype.getChanges = function() {
-  var schema = this.schema_;
-  var getReq = function(key, req) {
-    if (schema[key] && schema[key].require) {
-      goog.array.extend(req, schema[key].require);
-      for (var i = 0; i < schema[key].require.length; i++) {
-        if (schema[key].require[i] !== key)
-          getReq(schema[key].require[i], req);
-      }
-    }
-  };
 
   var ret = goog.object.getKeys(goog.object.filter(this.schema_,
       function(val, key) {
-        var requires = [];
-        getReq(key, requires);
-        return goog.array.some(requires, function(require) {
-          return this.attr_[require] !== this.prev_[require];
-        }, this);
+        return this.prev(key) != this.get(key);
       }, this));
   goog.array.extend(ret, goog.object.getKeys(goog.object.filter(this.attr_,
       function(val, key) {
@@ -439,8 +437,10 @@ mvc.Model.prototype.revert = function(opt_silent) {
       newAttr[key].prev = val;
     }
   });
-  if (!opt_silent)
+  if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
+    this.prev_ = goog.object.clone(this.attr_);
+  }
   return this;
 };
 
