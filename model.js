@@ -325,7 +325,7 @@ mvc.Model.prototype.prev = function(key) {
           if (requireKey === key) {
             return this.prev_[key];
           }
-          var get = this.get(requireKey);
+          var get = this.prev(requireKey);
           return get;
         },this));
     return get;
