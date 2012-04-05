@@ -253,6 +253,31 @@ You can also set a schema for a model. A schema is an object which has a set of 
 
 the require should be put in for any user defined attributes as the model goes up the require chain to decide when to fire a change event on these attributes.
 
+### comparing ###
+
+A model decides whether it has changed by keeping an unsafe clone of the attributes object form the previous change event. The model will only be able to make comparisons between native types and arrays of native types. Objects such as maps or generated objects will always return as a change unless you set a comparator function in the schema. You can do this by:
+
+```javascript
+{
+  'user': {
+    cmp: function(a, b) {return a.id == b.id;}
+  }
+}
+```
+
+A comparator function is set on the schema under the cmp keyword and should take the form of a function that takes the two objects and returns true if they match or false otherwise. the mvc.Model has some comparison functions already bake in that you can use:
+
+```javascript
+// recurse through the object/arrays and compare all primitive values
+mvc.Model.Compare.RECURSIVE;
+// call the toString() method on the objects and compare
+// only use this if you've set a .toString() for the objects
+mvc.Model.Compare.STRING;
+// serialize the object as json then compare the strings
+// uses closures json serializer
+mvc.Model.Compare.SERIALIZE;
+```
+
 ## mvc.Collection ##
 
 A mvc.Collection extends mvc.Model and so has all of it's properties. Also a collection can contain an array of models that belong to it. A collection can keep these models in an order if given a comparator function.
@@ -490,6 +515,7 @@ you can then run the tests by going to:
 - redo the README
 - new name
 - tests with plovr
+- add in comparison ability for schema
 
 #### v0.9 ####
 

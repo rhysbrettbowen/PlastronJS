@@ -61,7 +61,7 @@ mvc.Model = function(opt_options) {
      * @private
      * @type {Object}
      */
-  this.schema_ = defaults['schema'];
+  this.schema_ = defaults['schema'] || {};
 
   this.sync_ = defaults['sync'];
 
@@ -84,6 +84,58 @@ mvc.Model = function(opt_options) {
   this.dispatchEvent(goog.events.EventType.LOAD);
 };
 goog.inherits(mvc.Model, goog.events.EventTarget);
+
+
+/**
+ * functions for use with the cmp parameter in the schema
+ *
+ * @enum {function(*, *):boolean}
+ */
+mvc.Model.Compare = {
+  /**
+   * @param {*} a first object to compare.
+   * @param {*} b second object to compare.
+   * @return {boolean} whether they are equal.
+   */
+  RECURSIVE: function(a, b) {
+    if (goog.isObject(a)) {
+      if (goog.isObject(b)) {
+        var aKeys = goog.object.getKeys(a);
+        var bKeys = goog.object.getKeys(b);
+        if (!goog.array.equals(aKeys, bKeys))
+          return false;
+        for (var i = 0; i < aKeys.length; i++) {
+          if (!mvc.Model.Compare.RECURSIVE(a[aKeys[i]], b[bKeys[i]]))
+            return false;
+        }
+        return true;
+      } else
+        return false;
+    } else if (goog.isObject(b))
+      return false;
+    return a === b;
+  },
+  /**
+   * @param {*} a first object to compare.
+   * @param {*} b second object to compare.
+   * @return {boolean} whether they are equal.
+   */
+  STRING: function(a, b) {
+    try {
+      return a.toString() === b.toString();
+    } catch (err) {
+      return false;
+    }
+  },
+  /**
+   * @param {*} a first object to compare.
+   * @param {*} b second object to compare.
+   * @return {boolean} whether they are equal.
+   */
+  SERIALIZE: function(a, b) {
+    return goog.json.serialize(a) === goog.json.serialize(b);
+  }
+};
 
 
 /**
@@ -232,7 +284,12 @@ mvc.Model.prototype.setSchema = function(schema) {
  * @param {Object} schema to add rules from.
  */
 mvc.Model.prototype.addSchemaRules = function(schema) {
-  goog.object.extend(this.schema_, schema);
+  goog.object.forEach(schema, function(val, key) {
+    if (this.schema_[key])
+      goog.object.extend(this.schema_[key], goog.object.clone(schema[key]));
+    else
+      this.schema_[key] = goog.object.clone(schema[key]);
+  }, this);
 };
 
 
@@ -282,7 +339,8 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
   if (success) {
     if (!opt_silent) {
       this.dispatchEvent(goog.events.EventType.CHANGE);
-      this.prev_ = goog.object.clone(this.attr_);
+      this.prev_ = /** @type {Object.<(Object|null)>|null} */
+          (goog.object.unsafeClone(this.attr_));
       this.attr_ = goog.object.filter(this.attr_, function(val, key) {
         return goog.isDef(val);
       });
@@ -308,7 +366,8 @@ mvc.Model.prototype.unset = function(key, opt_silent) {
  */
 mvc.Model.prototype.change = function() {
   this.dispatchEvent(goog.events.EventType.CHANGE);
-  this.prev_ = goog.object.clone(this.attr_);
+  this.prev_ = /** @type {Object.<(Object|null)>|null} */
+      (goog.object.unsafeClone(this.attr_));
 };
 
 
@@ -411,10 +470,21 @@ mvc.Model.prototype.getChanges = function() {
 
   var ret = goog.object.getKeys(goog.object.filter(this.schema_,
       function(val, key) {
+        if (this.schema_[key].cmp)
+          return !this.schema_[key].cmp(this.prev(key), this.get(key));
+        var prev = this.prev(key);
+        if (goog.isArray(prev)) {
+          return !goog.array.equals(prev, this.get(key));
+        }
         return this.prev(key) != this.get(key);
       }, this));
   goog.array.extend(ret, goog.object.getKeys(goog.object.filter(this.attr_,
       function(val, key) {
+        if (goog.isDef(this.schema_[key]))
+          return false;
+        if (goog.isArray(val)) {
+          return !goog.array.equals(val, this.prev_[key]);
+        }
         return val !== this.prev_[key];
       }, this)));
   return ret;
