@@ -471,6 +471,16 @@ goog.addSingletonGetter(myapp.Mediator);
 
 you can then register your object with the mediator and the messages that you may pass. This allows other modules that are listening for a specific message to run some initiation, or dispose when you unregister. You can listen to messages using the on method and stop using the off method. You can even test to see if anyone is listening for a message using the isListened method
 
+## Testing ##
+
+To run tests you need to run plovr. From the root:
+
+    java -jar plovr/plovr.jar serve plovr/test.js
+
+you can then run the tests by going to:
+
+    http://localhost:9810
+
 ### changelog ###
 
 ### v1.0a ###
@@ -479,6 +489,7 @@ you can then register your object with the mediator and the messages that you ma
 - put tests in their own folder (they'll be broken - that's why this is alpha)
 - redo the README
 - new name
+- tests with plovr
 
 #### v0.9 ####
 
