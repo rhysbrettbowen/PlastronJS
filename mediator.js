@@ -102,8 +102,9 @@ mvc.Mediator.prototype.on = function(message, fn, opt_handler) {
   if (goog.isFunction(fn)) {
     fn = {fn: fn};
   }
+  goog.bind(fn.fn, opt_handler || this);
   goog.array.insert(this.listeners_[message],
-      goog.bind(fn.fn, opt_handler || this));
+      fn);
   return goog.getUid(fn);
 };
 
