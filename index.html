@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Plastronjs : MVC framework for Closure Library and Closure Compiler" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Plastronjs</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/rhysbrettbowen/PlastronJS">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Plastronjs</h1>
+          <h2 id="project_tagline">MVC framework for Closure Library and Closure Compiler</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/rhysbrettbowen/PlastronJS/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/rhysbrettbowen/PlastronJS/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><img alt="Logo"></p>
+
+<h1>PlastronJS</h1>
+
+<p>formerly goog.mvc</p>
+
+<p>PlastronJS is an MVC library which uses the Google Closure library for use with the Closure Compiler. I've decided to call it Plastron after the name of the underside of the turtle to mimic names of frameworks like Backbone and Spine but also because it's a good base to build upon.</p>
+
+<p>PlastronJS though is not just a MVC framework, it's the start of an application framework. I've decided to include a mediator and a store with the package which will hopefully help in the construction of medium to large size applications.</p>
+
+<p>The source code should be well documented and I plan on including tutorials on my blog at <a href="http://rhysbrettbowen.com">http://rhysbrettbowen.com</a>. Feel free to contact me at rhysbrettbowen@gmail.com if there are any questions</p>
+
+<p>The folder should be put in your project directory and the path passed to the closure compiler. I have my project folder setup like this:</p>
+
+<pre><code>myApp/
+    js/ &lt;- your main app code here.
+    lib/ &lt;- libraries you use here.
+        mvc/ &lt;- PlastronJS here.
+    styles/ &lt;- CSS/GSS/SASS etc.
+    template/ &lt;- Soy files here.
+</code></pre>
+
+<p>to use a module you'll need to include it</p>
+
+<div class="highlight">
+<pre><span class="nx">goog</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s1">'mvc.Model'</span><span class="p">);</span>
+</pre>
+</div>
+
+
+<p>I decided to leave the namespace that the project is under at mvc for two reasons. The first is that it's simpler to write than PlastronJS and the second is that it makes more sense in the code.</p>
+
+<p>I'd like to point out that I've spent a lot of time reading the source code of other MVC frameworks, most notably Backbone.js so hopefully it will seem fairly familiar. There are however some notable differences. The closure compiler does not mix dot notation and square bracket notation so a lot of the nice linking to functions based on names was out of the question. I also want this framework to work for larger applications. A lot of people find trouble with the current mvc frameworks because they don't scale well or provide functionality for more complex systems. I'm hoping that I have addressed this. Lastly I developed this MVC to use on the webclient at Catch.com so some of the decisions I made were based on what I needed - but I have also included extra functionality I am not using and this means that some parts are not tested as rigorously. If you do spot any bugs or any features that need fine tuning please let me know or fork the project and make some changes.</p>
+
+<p>If you are new to closure then you need this book <a href="http://www.amazon.com/Closure-Definitive-Guide-Michael-Bolin/dp/1449381871">http://www.amazon.com/Closure-Definitive-Guide-Michael-Bolin/dp/1449381871</a></p>
+
+<h2>mvc.Model</h2>
+
+<p>The model is the main component. It allows you to store data and send out change events when it changes (it extends goog.events.EventTarget). It also communicates with the data store through mvc.Sync</p>
+
+<h3>make a Model</h3>
+
+<p>You can instantiate a new model directly, or you may wish to create a new type of model that inherits from mvc.Model like so:</p>
+
+<div class="highlight">
+<pre><span class="nx">goog</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s1">'mvc.Model'</span><span class="p">);</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * @constructor</span>
+<span class="cm"> * @inheritDoc</span>
+<span class="cm"> */</span>
+<span class="kd">var</span> <span class="nx">Person</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">firstName</span><span class="p">,</span> <span class="nx">lastName</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">goog</span><span class="p">.</span><span class="nx">base</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="p">{</span><span class="nx">attr</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s1">'firstName'</span><span class="o">:</span> <span class="nx">firstName</span><span class="p">,</span>
+        <span class="s1">'lastName'</span><span class="o">:</span> <span class="nx">lastName</span>
+    <span class="p">}});</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">meta</span><span class="p">(</span><span class="s1">'name'</span><span class="p">,</span> <span class="p">[</span><span class="s1">'firstName'</span><span class="p">,</span><span class="s1">'lastName'</span><span class="p">],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">firstName</span><span class="p">,</span> <span class="nx">lastName</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">lastName</span> <span class="o">+</span> <span class="s2">", "</span> <span class="o">+</span> <span class="nx">firstName</span><span class="p">;</span>
+    <span class="p">});</span>
+<span class="p">};</span>
+<span class="nx">goog</span><span class="p">.</span><span class="nx">inherits</span><span class="p">(</span><span class="nx">Person</span><span class="p">,</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">);</span>
+</pre>
+</div>
+
+
+<p>Another option is to just create a model and differentiate it by a schema:</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">Rhys</span> <span class="o">=</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span>
+    <span class="s1">'schema'</span><span class="o">:</span> <span class="nx">myApp</span><span class="p">.</span><span class="nx">schema</span><span class="p">.</span><span class="nx">Person</span>
+    <span class="p">});</span>
+</pre>
+</div>
+
+
+<p>we'll go in to schemas later.</p>
+
+<p>Any setup would go in the constructor function (in the above we used the meta function to create a meta attribute). You can override methods and add new methods of your own.</p>
+
+<h3>new Model options</h3>
+
+<p>When creating a new model instance, the constructor takes an options object. The options object takes the special keys 'schema', 'sync' and 'attr'. You can put any attributes directly in the object except for the reserved keywords of schema, sync and attr. If you do wish to use these in your model then you can place them under the attr keyword. To be safe it's best to put them all under the attr keyword. So an options object might look a little something like this:</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">attr</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">'firstName'</span><span class="o">:</span> <span class="s1">'Rhys'</span><span class="p">,</span>
+  <span class="s1">'lastName'</span><span class="o">:</span> <span class="s1">'Brett-Bowen'</span>
+<span class="p">};</span>
+<span class="kd">var</span> <span class="nx">options</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">'attr'</span><span class="o">:</span> <span class="nx">attr</span><span class="p">,</span>
+  <span class="s1">'sync'</span><span class="o">:</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">AjaxSync</span><span class="p">()</span>
+<span class="p">};</span>
+</pre>
+</div>
+
+
+<p>or</p>
+
+<pre><code>var options = {
+  'firstName': 'Rhys',
+  'lastName': 'Brett-Bowen'
+};
+</code></pre>
+
+<p>in the second example I put the attributes right in the object. I can do this and mix them with 'schema' and 'sync'. Just remember that 'attr', 'sync' and 'schema' are reserved words, 'attr' is a safe place for attributes and 'sync' and 'schema' are reserved.</p>
+
+<p>You might also noticed that I put quotes around the keys in the object. This is necessary as closure would rename the keys after compilation and that means that shema could become 'c' which would be put in as an attribute. I will point out where you need to use quotes and where they are optional as I go on.</p>
+
+<h3>get and set key/values</h3>
+
+<p>You should always use the get() and set() functions when dealing with the model's data. These functions take care of saving old data and publishing change events. To get and set data you can do the below:</p>
+
+<div class="highlight">
+<pre><span class="nx">model</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'firstName'</span><span class="p">);</span> <span class="c1">// returns 'Rhys'</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'firstName'</span><span class="p">,</span> <span class="s1">'Bruce'</span><span class="p">);</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'firstName'</span><span class="p">);</span> <span class="c1">//returns 'Bruce'</span>
+</pre>
+</div>
+
+
+<h3>customizing get and set</h3>
+
+<p>You can also manipulate how you get and set the data using these functions by either specifying a schema object (which we'll go in to later) or by using the below functions to modify the model's default schema</p>
+
+<p>The alias function allows you to get a member using a different name</p>
+
+<div class="highlight">
+<pre><span class="nx">model</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'lastName'</span><span class="p">,</span> <span class="s1">'Brett-Bowen'</span><span class="p">);</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">alias</span><span class="p">(</span><span class="s1">'surname'</span><span class="p">,</span> <span class="s1">'lastName'</span><span class="p">);</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'surname'</span><span class="p">);</span> <span class="c1">// returns 'Brett-Bowen'</span>
+</pre>
+</div>
+
+
+<p>The format function allows you to change how the data is presented</p>
+
+<div class="highlight">
+<pre><span class="nx">model</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'now'</span><span class="p">,</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">());</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">format</span><span class="p">(</span><span class="s1">'now'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">now</span><span class="p">)</span> <span class="p">{</span><span class="k">return</span> <span class="nx">now</span><span class="p">.</span><span class="nx">toDateString</span><span class="p">()});</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'now'</span><span class="p">);</span> <span class="c1">// returns the set date as a string</span>
+</pre>
+</div>
+
+
+<p>The meta function is passed the new variable name, an array or attributes to base the data off and the formatting function. To do this you need to pass the new attribute name, the required attributes and the function.</p>
+
+<div class="highlight">
+<pre><span class="nx">model</span><span class="p">.</span><span class="nx">set</span><span class="p">({</span>
+    <span class="s1">'firstName'</span><span class="o">:</span> <span class="s1">'Rhys'</span><span class="p">,</span>
+    <span class="s1">'lastName'</span><span class="o">:</span> <span class="s1">'Brett-Bowen'</span>
+    <span class="p">});</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">meta</span><span class="p">(</span><span class="s1">'name'</span><span class="p">,</span> <span class="p">[</span><span class="s1">'firstName'</span><span class="p">,</span> <span class="s1">'lastName'</span><span class="p">],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">firstName</span><span class="p">,</span> <span class="nx">lastName</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">lastName</span> <span class="o">+</span> <span class="s2">", "</span> <span class="o">+</span> <span class="nx">Rhys</span><span class="p">;</span>
+<span class="p">});</span>
+<span class="nx">model</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'name'</span><span class="p">);</span> <span class="c1">// returns "Brett-Bowen, Rhys"</span>
+</pre>
+</div>
+
+
+<h3>setting and validation</h3>
+
+<p>You can also change how you set and validate data by using the setter function. you can do any checks on the data in the function and throw and error if it doesn't pass. The errors are handled by the model's error handling function. By default it just ignores the error and the value isn't set, but you can override it by:</p>
+
+<div class="highlight">
+<pre>  <span class="kd">var</span> <span class="nx">errorFn</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">getMessage</span><span class="p">());</span>
+  <span class="p">};</span>
+  <span class="nx">model</span><span class="p">.</span><span class="nx">errorHandler</span><span class="p">(</span><span class="nx">errorFn</span><span class="p">);</span>
+</pre>
+</div>
+
+
+<p>We can then put in a formatting and validating function for our name</p>
+
+<div class="highlight">
+<pre><span class="nx">model</span><span class="p">.</span><span class="nx">setter</span><span class="p">(</span><span class="s1">'firstName'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">name</span> <span class="o">=</span> <span class="nx">goog</span><span class="p">.</span><span class="nx">string</span><span class="p">.</span><span class="nx">trim</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">name</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">"name can not be blank"</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">name</span><span class="p">;</span>
+<span class="p">})</span>
+</pre>
+</div>
+
+
+<p>the above will check to see that a name isn't blank and trim the input.</p>
+
+<h3>Binding &amp; unbinding data</h3>
+
+<p>the real power in a model comes in binding. You can bind keys, or computed keys to functions. The bind function takes three arguments. The first is the attribute name or an array of attribute names whose changes you want to listen to. The second is a function which will be passed the value of each of the items you are listening to and the model. The final parameter is the object to bind the function to. So you could do this:</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">task</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">({</span><span class="s1">'done'</span><span class="o">:</span><span class="kc">false</span><span class="p">,</span><span class="s1">'important'</span><span class="o">:</span><span class="kc">false</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">element</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">'myTask'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">bound</span> <span class="o">=</span> <span class="nx">task</span><span class="p">.</span><span class="nx">bind</span><span class="p">([</span><span class="s1">'done'</span><span class="p">,</span><span class="s1">'important'</span><span class="p">],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">done</span><span class="p">,</span> <span class="nx">important</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">checked</span> <span class="o">=</span> <span class="nx">done</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">setProperty</span><span class="p">(</span><span class="s1">'important'</span><span class="p">,</span> <span class="nx">important</span><span class="p">);</span>
+  <span class="p">},</span> <span class="nx">element</span><span class="p">);</span>
+<span class="c1">// changes to done or important will change the element</span>
+<span class="nx">task</span><span class="p">.</span><span class="nx">unbind</span><span class="p">(</span><span class="nx">bound</span><span class="p">);</span>
+<span class="c1">//changes will no longer change the element</span>
+</pre>
+</div>
+
+
+<p>in the example above we saved a uid in bound that we can use to unbind a listener. All bind functions return a uid that can be used with unbind.</p>
+
+<h3>binding keys to a function</h3>
+
+<p>the model class comes with a function getBinder that can be used to bind a function to a key. For instance you can use it for convenience methods to get and set keys:</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">lat</span> <span class="o">=</span> <span class="nx">model</span><span class="p">.</span><span class="nx">getBinder</span><span class="p">(</span><span class="s1">'location:latitude'</span><span class="p">);</span>
+<span class="nx">lat</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="c1">// sets the location:latitude to 3</span>
+<span class="nx">lat</span><span class="p">()</span> <span class="c1">// returns 3</span>
+</pre>
+</div>
+
+
+<p>you can even use this with the bind method above to bind a key with a key from another model</p>
+
+<div class="highlight">
+<pre><span class="c1">// married couple living together</span>
+<span class="kd">var</span> <span class="nx">husband</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">({</span><span class="s1">'city'</span><span class="o">:</span><span class="s1">'San Francisco'</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">wife</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">({</span><span class="s1">'city'</span><span class="o">:</span><span class="s1">'San Francisco'</span><span class="p">});</span>
+<span class="nx">husband</span><span class="p">.</span><span class="nx">bind</span><span class="p">(</span><span class="s1">'city'</span><span class="p">,</span> <span class="nx">wife</span><span class="p">.</span><span class="nx">getBinder</span><span class="p">(</span><span class="s1">'city'</span><span class="p">));</span>
+<span class="nx">husband</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'city'</span><span class="p">,</span> <span class="s1">'New York'</span><span class="p">);</span>
+<span class="nx">wife</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">'city'</span><span class="p">)</span> <span class="c1">// returns New York</span>
+</pre>
+</div>
+
+
+<h3>listening to all changes</h3>
+
+<p>if you want to listen to any change you can use bindAll and just pass in a function. and an optional handler.</p>
+
+<h3>unload</h3>
+
+<p>there is also a bindUnload that takes in a function and an optional handler to be fired when the model's dispose() method is called.</p>
+
+<h3>other functions</h3>
+
+<p>There are also other functions that can take parameters such as the boolean "silent" to suppress change events. The other functions available on a model are:</p>
+
+<ul>
+<li>toJson: used to return a json model that can be used by mvc.Sync or other objects. You should generally override this method with your own implementation</li>
+<li>setSync(mvc.Sync): will set the sync used by the object</li>
+<li>reset(silent): clears the attributes</li>
+<li>isNew: returns a boolean if an id has been set (rather than just a cid)</li>
+<li>setSchema(Obj): sets the schema</li>
+<li>addSchemaRules(Obj): will extend the schema object with the object passed in</li>
+<li>has(string): whether the model has the key</li>
+<li>unset(string): deletes a key (sets to undefined)</li>
+<li>change: manually fire a change event - handy if you've been using silent for bulk operations</li>
+<li>prev(string): the previous value of an attribute, gets the raw data</li>
+<li>getChanges: tells you what values has changed since the last change event used internally by bind to figure out what to fire change events for</li>
+<li>revert: rolls back to the previous attributes</li>
+<li>fetch(callback, silent): updates the model using it's sync</li>
+<li>save: tells the sync to create/update</li>
+<li>dispose(bool): disposes of the model and all it's listeners. Pass true if you want the model to call the model's sync's delete function</li>
+</ul><h2>Schema</h2>
+
+<p>You can also set a schema for a model. A schema is an object which has a set of keys for which you want getters and setters. Under the key you can put an object with the keys of get, set and require. The get function works much like the meta function above (in fact the meta function is just a nice way to add things to the schema). The function will accept in the values for any attributes you put in the require array. The set function will take the value and should return the data to get set on the model. You can also throw errors to stop the value saving and fire the models handleErr_ function which you should set. an example of a schema:</p>
+
+<div class="highlight">
+<pre><span class="p">{</span>
+    <span class="s1">'firstname'</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">set</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">name</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">64</span><span class="p">)</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">"name is too long"</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nx">goog</span><span class="p">.</span><span class="nx">string</span><span class="p">.</span><span class="nx">trim</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s1">'fullName'</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">get</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">first</span><span class="p">,</span> <span class="nx">last</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">last</span> <span class="o">+</span> <span class="s2">", "</span> <span class="o">+</span> <span class="nx">first</span><span class="p">;</span>
+        <span class="p">},</span>
+        <span class="nx">require</span><span class="o">:</span> <span class="p">[</span><span class="s1">'firstname'</span><span class="p">,</span><span class="s1">'lastname'</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+</div>
+
+
+<p>the require should be put in for any user defined attributes as the model goes up the require chain to decide when to fire a change event on these attributes.</p>
+
+<h3>comparing</h3>
+
+<p>A model decides whether it has changed by keeping an unsafe clone of the attributes object form the previous change event. The model will only be able to make comparisons between native types and arrays of native types. Objects such as maps or generated objects will always return as a change unless you set a comparator function in the schema. You can do this by:</p>
+
+<div class="highlight">
+<pre><span class="p">{</span>
+  <span class="s1">'user'</span><span class="o">:</span> <span class="p">{</span>
+    <span class="nx">cmp</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span><span class="k">return</span> <span class="nx">a</span><span class="p">.</span><span class="nx">id</span> <span class="o">==</span> <span class="nx">b</span><span class="p">.</span><span class="nx">id</span><span class="p">;}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+</div>
+
+
+<p>A comparator function is set on the schema under the cmp keyword and should take the form of a function that takes the two objects and returns true if they match or false otherwise. the mvc.Model has some comparison functions already bake in that you can use:</p>
+
+<div class="highlight">
+<pre><span class="c1">// recurse through the object/arrays and compare all primitive values</span>
+<span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">.</span><span class="nx">Compare</span><span class="p">.</span><span class="nx">RECURSIVE</span><span class="p">;</span>
+<span class="c1">// call the toString() method on the objects and compare</span>
+<span class="c1">// only use this if you've set a .toString() for the objects</span>
+<span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">.</span><span class="nx">Compare</span><span class="p">.</span><span class="nx">STRING</span><span class="p">;</span>
+<span class="c1">// serialize the object as json then compare the strings</span>
+<span class="c1">// uses closures json serializer</span>
+<span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">.</span><span class="nx">Compare</span><span class="p">.</span><span class="nx">SERIALIZE</span><span class="p">;</span>
+</pre>
+</div>
+
+
+<h2>mvc.Collection</h2>
+
+<p>A mvc.Collection extends mvc.Model and so has all of it's properties. Also a collection can contain an array of models that belong to it. A collection can keep these models in an order if given a comparator function.</p>
+
+<h3>Sorting</h3>
+
+<p>A comparator function works the same as the javascript array.sort function - taking two models and returning -1, 0 or 1 and will also listen to changes and emit a change if any model it contains fires a change event.</p>
+
+<h3>children</h3>
+
+<p>The mvc.Collection can also take a modelType which works with the newModel method that takes an options map and will create a new model of the type passed in. So you can create new students is a class like this:</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">student</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">options</span><span class="p">){</span>
+    <span class="nx">goog</span><span class="p">.</span><span class="nx">base</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">options</span><span class="p">)</span>
+<span class="p">};</span>
+<span class="nx">goog</span><span class="p">.</span><span class="nx">inherits</span><span class="p">(</span><span class="nx">student</span><span class="p">,</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">);</span>
+<span class="kd">var</span> <span class="kr">class</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Collection</span><span class="p">({</span>
+    <span class="s1">'modelType'</span><span class="o">:</span> <span class="nx">student</span><span class="p">,</span>
+    <span class="s1">'name'</span><span class="o">:</span> <span class="s1">'clodure mvc 101'</span>
+<span class="p">});</span>
+<span class="kr">class</span><span class="p">.</span><span class="nx">addModel</span><span class="p">({</span><span class="s1">'name'</span><span class="o">:</span><span class="s1">'Fred'</span><span class="p">});</span>
+<span class="c1">// class now has a student called fred</span>
+</pre>
+</div>
+
+
+<h3>options</h3>
+
+<p>the options object for a collection is slightly different to that of a model. It has three extra reserved words. 'comparator' which is the comparison function, 'modelType' which is the base model to create when putting in a new child and 'models' which is an array of mvc.Models that should be added to the collection.</p>
+
+<h3>other functions</h3>
+
+<p>A collection also offers these aditional methods:</p>
+
+<ul>
+<li>pluck([keys]): returns an array of json models with the keys and values of each model</li>
+<li>setComparator(Function): change the comparator function to keep the models in order</li>
+<li>getLength: number of models contained</li>
+<li>sort(silent): used internally to sort the models</li>
+<li>add(mvc.Model, index, silent): adds a model to the end unless an index is given</li>
+<li>remove(mvc.Model, silent): removes the model</li>
+<li>getById(id): returns a model by it's id</li>
+<li>getModels(Function): returns an array of the models optionally filtered by a function that takes the model and the index and returns true if it should be returned in the filter otherwise false</li>
+<li>at(index): return the model at an index</li>
+<li>clear: clears all the models</li>
+<li>modelChange(function, handler): like bind for model but is bound only on changes to the collections children being sorted or added/removed</li>
+</ul><h2>mvc.Store</h2>
+
+<p>This can be used as a factory and cache for models. Use the get to retrieve models by their ID and if they don't exist they will be created. This is good to make sure your models are unique. If no ID is passed then a new model will be created and you can get the model using it's CID until an ID is set for the model.</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">store</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Store</span><span class="p">();</span>
+<span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="nx">store</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="mi">111</span><span class="p">);</span> <span class="c1">// store creates a new object with id 12345</span>
+                        <span class="c1">// it then calls sync to load it</span>
+<span class="kd">var</span> <span class="nx">b</span> <span class="o">=</span> <span class="nx">store</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="mi">111</span><span class="p">);</span>
+<span class="nx">a</span> <span class="o">==</span> <span class="nx">b</span><span class="p">;</span> <span class="c1">//true</span>
+
+<span class="nx">a</span> <span class="o">=</span> <span class="nx">store</span><span class="p">.</span><span class="nx">get</span><span class="p">();</span> <span class="c1">// a is a new model</span>
+<span class="nx">a</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s1">'id'</span><span class="p">,</span> <span class="mi">12345</span><span class="p">)</span>
+<span class="nx">b</span> <span class="o">=</span> <span class="nx">store</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span>
+<span class="nx">a</span> <span class="o">==</span> <span class="nx">b</span><span class="p">;</span> <span class="c1">// true, store listens to changes on id and sets it when one is set</span>
+</pre>
+</div>
+
+
+<h2>mvc.Control</h2>
+
+<p>The mvc.Control inherits from goog.ui.Component and so works in a similar way. You create it's DOM in the createDom method and can make changes to it's dom by setting up listeners in the enterDocument method.</p>
+
+<h3>making a new control</h3>
+
+<p>adding in a control is the same as adding in a goog.ui.component. The only thing is that you have to pass it a model or collection that it is to be associated with. You'll then be able to access it through the controls getModel() method.</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">model</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Model</span><span class="p">();</span>
+<span class="kd">var</span> <span class="nx">control</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Control</span><span class="p">(</span><span class="nx">model</span><span class="p">);</span>
+<span class="nx">control</span><span class="p">.</span><span class="nx">getModel</span><span class="p">()</span> <span class="o">==</span> <span class="nx">model</span><span class="p">;</span> <span class="c1">// true</span>
+</pre>
+</div>
+
+
+<h3>getting a child element</h3>
+
+<p>a control has the function getEls(selector) which can find elements in it's DOM for you. All you need to do is pass it a valid selector that can be in the form of:</p>
+
+<ul>
+<li>".className"</li>
+<li>"#elementId"</li>
+<li>"tagName[ .className]"</li>
+</ul><p>where the square brackets show that it is optional.</p>
+
+<h3>handling events</h3>
+
+<p>handling events are done slightly different to what you may be used to. A control only has one listener per event type and manually decides which handlers to fire. To listen for an event you just need to do this:</p>
+
+<div class="highlight">
+<pre><span class="nx">control</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">enterDocument</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">goog</span><span class="p">.</span><span class="nx">base</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="s1">'enterDocument'</span><span class="p">);</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="nx">goog</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">EventType</span><span class="p">.</span><span class="nx">CLICK</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">alert</span><span class="p">(</span><span class="s1">'clicked'</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">};</span>
+</pre>
+</div>
+
+
+<p>for clicks there is even a convenience function called .click()</p>
+
+<p>But what if you want to listen for a click on a particular element?</p>
+
+<h3>delegating events</h3>
+
+<p>You can decide whether or not to fire a handler by either the className of the element (or an array of classNames if it can fire or any of them) or a function that takes the event and returns true if it should be handled. for instance:</p>
+
+<div class="highlight">
+<pre><span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s1">'click'</span><span class="p">)},</span> <span class="p">[</span><span class="s2">"star"</span><span class="p">,</span> <span class="s2">"unstar"</span><span class="p">]);</span>
+</pre>
+</div>
+
+
+<p>will fire for any element that has the class star or unstar. If you want to fine tune it more you could use a function:</p>
+
+<div class="highlight">
+<pre><span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s2">"click"</span><span class="p">);},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span><span class="k">return</span> <span class="nx">e</span><span class="p">.</span><span class="nx">clientX</span><span class="o">&lt;</span><span class="mi">100</span><span class="p">;});</span>
+</pre>
+</div>
+
+
+<p>this will fire for clicks in the left 100px of the screen that are on the control.</p>
+
+<h3>handling priorities</h3>
+
+<p>Because of all this we need finer control over what should fire first. because of this the .on() method can also take a priority. The default priority is 50 and items with the same priority will be executed in the order they are given. You can change this by giving a lower number, which is a higher priority.</p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s1">'a'</span><span class="p">)});</span>
+<span class="kd">var</span> <span class="nx">b</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s1">'b'</span><span class="p">)});</span>
+<span class="c1">// click will alert a the alert b</span>
+<span class="k">this</span><span class="p">.</span><span class="nx">off</span><span class="p">(</span><span class="nx">a</span><span class="p">);</span>
+<span class="k">this</span><span class="p">.</span><span class="nx">off</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span>
+<span class="nx">a</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s1">'a'</span><span class="p">)});</span>
+<span class="nx">b</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span><span class="nx">alert</span><span class="p">(</span><span class="s1">'b'</span><span class="p">)},</span> <span class="kc">undefined</span><span class="p">,</span> <span class="k">this</span><span class="p">,</span> <span class="mi">40</span><span class="p">);</span>
+<span class="c1">// click will alert b then alert a</span>
+</pre>
+</div>
+
+
+<p>above the arguments in the last click call are the function, the decider function/classname filter (undefined for no filter so fire on all clicks), the optional handler to bind the function to (it binds to this by default, but putting in this is shorted than undefined) and then the last parameter is the priority which should be a number.</p>
+
+<h3>unhandling</h3>
+
+<p>you can use the off method like I have above to unbind any handlers just like unbind in models.</p>
+
+<h3>handling notes</h3>
+
+<p>you can create other convenience functions like click easily using the goog.bind. All you need to do is this:</p>
+
+<div class="highlight">
+<pre>  <span class="k">this</span><span class="p">.</span><span class="nx">mouseOver</span> <span class="o">=</span> <span class="nx">goog</span><span class="p">.</span><span class="nx">bind</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">on</span><span class="p">,</span> <span class="k">this</span><span class="p">,</span> <span class="nx">goog</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">EventType</span><span class="p">.</span><span class="nx">MOUSE_OVER</span><span class="p">);</span>
+</pre>
+</div>
+
+
+<p>you can also handle an event only once by using the .once() method</p>
+
+<h3>binding to a model</h3>
+
+<p>The best place to setup bindings is in the controls enterDocument method. for instance:</p>
+
+<div class="highlight">
+<pre><span class="k">this</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">getModel</span><span class="p">().</span><span class="nx">set</span><span class="p">(</span><span class="s1">'star'</span><span class="p">,</span> <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">getModel</span><span class="p">().</span><span class="nx">get</span><span class="p">(</span><span class="s1">'star'</span><span class="p">));</span>
+  <span class="p">},</span> <span class="s2">"starButton"</span><span class="p">);</span>
+<span class="k">this</span><span class="p">.</span><span class="nx">getModel</span><span class="p">().</span><span class="nx">bind</span><span class="p">(</span><span class="s1">'star'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">star</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="nx">star</span><span class="p">)</span>
+    <span class="nx">goog</span><span class="p">.</span><span class="nx">dom</span><span class="p">.</span><span class="nx">classes</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getEls</span><span class="p">(</span><span class="s2">".starButton"</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">'star'</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="nx">goog</span><span class="p">.</span><span class="nx">dom</span><span class="p">.</span><span class="nx">classes</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getEls</span><span class="p">(</span><span class="s2">".starButton"</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">'star'</span><span class="p">);</span>
+<span class="p">},</span> <span class="k">this</span><span class="p">);</span>
+</pre>
+</div>
+
+
+<p>now clicking on the star button will change the star attribute and that will in turn change the class on the star Button. There are lots of ways to match up the bindings.</p>
+
+<h2>mvc.Sync</h2>
+
+<p>This is an interface that should have a custom implementation. Two simple implementations have been given called mvc.AjaxSync and mvc.LocalSync. The purpose of sync is to be the glue between the model and the dataStore.</p>
+
+<p>The AjaxSync can be used and passed an object of functions or strings (with the strings acting much like the router example below) for each of the four methods create, read, update and del. These will be used for the call.</p>
+
+<h2>mvc.Router</h2>
+
+<p>mvc.Router uses goog.History and hash tokens to hold and manage the state of the application. You can define a route with a regular expression that will fire custom events when a certain route comes on the URL. A route can be defined with a route expression which can take : followed by an attribute, a * to pass the rest of the route and [] for an optional part of the url (which will be passed to the function). For instance:</p>
+
+<div class="highlight">
+<pre><span class="nx">route</span> <span class="o">=</span> <span class="s2">"/note=:id[/edit][?*]"</span><span class="p">;</span>
+</pre>
+</div>
+
+
+<p>should take a function with four attribute:
+<code>javascript
+function(id,edit,query,queryVals)
+</code></p>
+
+<p>so for /note=1234567890/edit?abc=123 will give:</p>
+
+<div class="highlight">
+<pre><span class="kd">function</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span><span class="nx">edit</span><span class="p">,</span><span class="nx">query</span><span class="p">,</span><span class="nx">queryVals</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span> <span class="c1">// 1234567890</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">edit</span><span class="p">);</span> <span class="c1">// /edit</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">query</span><span class="p">);</span> <span class="c1">// ?abc=123</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">queryVals</span><span class="p">);</span> <span class="c1">// abc=123</span>
+<span class="p">}</span>
+</pre>
+</div>
+
+
+<h2>mvc.Mediator</h2>
+
+<p>mvc.Mediator allows message passing between components. It's most useful as a singleton so you could do this:</p>
+
+<div class="highlight">
+<pre><span class="nx">goog</span><span class="p">.</span><span class="nx">require</span><span class="p">(</span><span class="s1">'mvc.Mediator'</span><span class="p">);</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * @constructor</span>
+<span class="cm"> * @extends {mvc.Mediator}</span>
+<span class="cm"> */</span>
+<span class="nx">myapp</span><span class="p">.</span><span class="nx">Mediator</span><span class="o">=</span><span class="kd">function</span><span class="p">(){};</span>
+<span class="nx">goog</span><span class="p">.</span><span class="nx">inherits</span><span class="p">(</span><span class="nx">myapp</span><span class="p">.</span><span class="nx">Mediator</span><span class="p">,</span> <span class="nx">mvc</span><span class="p">.</span><span class="nx">Mediator</span><span class="p">);</span>
+<span class="nx">goog</span><span class="p">.</span><span class="nx">addSingletonGetter</span><span class="p">(</span><span class="nx">myapp</span><span class="p">.</span><span class="nx">Mediator</span><span class="p">);</span>
+
+<span class="c1">// you can then access the mediator anywhere in your app using:</span>
+<span class="c1">// mvc.Mediator.getInstance();</span>
+</pre>
+</div>
+
+
+<p>you can then register your object with the mediator and the messages that you may pass. This allows other modules that are listening for a specific message to run some initiation, or dispose when you unregister. You can listen to messages using the on method and stop using the off method. You can even test to see if anyone is listening for a message using the isListened method</p>
+
+<h2>Testing</h2>
+
+<p>To run tests you need to run plovr. From the root:</p>
+
+<pre><code>java -jar plovr/plovr.jar serve plovr/test.js
+</code></pre>
+
+<p>you can then run the tests by going to:</p>
+
+<pre><code>http://localhost:9810
+</code></pre>
+
+<h3>changelog</h3>
+
+<h3>v1.0a</h3>
+
+<ul>
+<li>alpha release</li>
+<li>put tests in their own folder (they'll be broken - that's why this is alpha)</li>
+<li>redo the README</li>
+<li>new name</li>
+<li>tests with plovr</li>
+<li>add in comparison ability for schema</li>
+</ul><h4>v0.9</h4>
+
+<ul>
+<li>reworked bind for performance</li>
+<li>schema is now an object</li>
+<li>mvc.Control events can now be given a priority to order them</li>
+<li>more tests</li>
+<li>files pass closure linter in strict mode</li>
+<li>can unbind listeners on collection model change</li>
+<li>getBinder reworked so can use as getter and setters</li>
+<li>control.on accepts a function as well as classname to define see if a handler should run</li>
+</ul><h4>v0.8</h4>
+
+<ul>
+<li>lots of fixes</li>
+<li>can reset models</li>
+<li>passes JSHint</li>
+<li>routes can have square brackets for optional components</li>
+<li>change function to fire change events on mvc.Model</li>
+<li>ajax sync now has urlifyString</li>
+</ul><h4>v0.7</h4>
+
+<ul>
+<li>add in mvc.Mediator</li>
+<li>schema now throws errors and handles them</li>
+<li>fixes</li>
+</ul><h4>v0.6</h4>
+
+<ul>
+<li>split format function up to format, alias and meta</li>
+<li>changes fired for constructed attributes</li>
+<li>change the models constructor arguments to an options object</li>
+<li>store added</li>
+</ul><h4>v0.5</h4>
+
+<ul>
+<li>add in format function on model</li>
+<li>removed dependency on goog.dom from mvc.Model</li>
+<li>put in convenience functions for binding elements with model attributes</li>
+<li>put in convenience function for schema test for type of object</li>
+</ul><h4>v0.4</h4>
+
+<ul>
+<li>added pluck in to mvc.Collection</li>
+<li>fix sorting on models passed in at creation</li>
+<li>added in all_tests.html</li>
+<li>fixed mvc.Router</li>
+<li>tests for mvc.Router</li>
+</ul><h4>v0.3</h4>
+
+<ul>
+<li>add dispose() to mvc.Model</li>
+<li>fix mvc.AjaxSync</li>
+</ul><h4>v0.2</h4>
+
+<ul>
+<li>fix model.Schema</li>
+<li>mvc.Collection now takes optional index for add()</li>
+<li>mvc.Collection.newModel adds a new model to the collection</li>
+<li>mvc.AjaxSync first implementation</li>
+<li>mvc.AjaxSync first implementation</li>
+</ul><h4>v0.1</h4>
+
+<ul>
+<li>initial documentation and versioning</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Plastronjs maintained by <a href="https://github.com/rhysbrettbowen">rhysbrettbowen</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
