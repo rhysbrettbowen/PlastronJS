@@ -18,7 +18,7 @@ var testNavigation = function() {
 var testRoute = function() {
     var reached = false;
     var a = function(){reached = true;};
-    
+
     waitForEvent(router.history_, goog.history.EventType.NAVIGATE,
         function() {
             assert(reached);
