@@ -50,6 +50,28 @@ var testMeta = function() {
   assertEquals(simpleModel.get('jan1'),"1/1");
 };
 
+var testSetter = function() {
+  simpleModel.setter('a', function(a) {return 1;});
+  simpleModel.set('a', 2);
+  assertEquals("should get back 1", simpleModel.attr_['a'], 1);
+};
+
+var testValidate = function() {
+  var b = false;
+  simpleModel.set('a', 1);
+  simpleModel.errorHandler(function() {b=true;});
+  simpleModel.setter('a', function(a) {
+    if(a%2 === 0)
+      throw new Error("must be odd number");
+    return a;
+  });
+  simpleModel.set('a', 2);
+  assertEquals("should get back 1", simpleModel.attr_['a'], 1);
+  assert("error should be handled", b);
+  simpleModel.set('a', 3);
+  assertEquals("should get back 3", simpleModel.attr_['a'], 3);
+};
+
 var testValidateString = function() {
   var error = false;
   simpleModel.errorHandler(function() {
