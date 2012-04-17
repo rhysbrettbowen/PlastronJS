@@ -267,10 +267,11 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
  * @return {?mvc.Model} model that has id or null.
  */
 mvc.Collection.prototype.getById = function(id) {
-  return /** @type {mvc.Model} */(goog.array.find(this.models_,
+  var model = goog.array.find(this.models_,
       function(model) {
-        return model.get('id') == id;
-      }));
+        return model.model.get('id') == id;
+      });
+  return model ? /** @type {mvc.Model} */(model.model) : null;
 };
 
 

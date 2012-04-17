@@ -194,12 +194,13 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
 
     // convert constructor function to check type
     val = function(val) {
-      if (val.constructor == fn) {
+      var currClass = Object.getPrototypeOf(val).constructor ;
+      if (Object.getPrototypeOf(val).constructor == fn) {
         return val;
       }
-      while (val.superClass_) {
-        val = val.superClass_.constructor;
-        if (val == fn) {
+      while (currClass.superClass_) {
+        currClass = currClass.superClass_.constructor;
+        if (currClass == fn) {
           return val;
         }
       }
