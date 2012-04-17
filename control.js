@@ -60,10 +60,14 @@ mvc.Control.prototype.remove = function() {
 mvc.Control.prototype.handleEvents_ = function(type, e) {
   if (!this.eventHolder_.handlers[type])
     return;
+
+  // go through handlers in order and stop if propagation stopped
   goog.array.forEach(this.eventHolder_.handlers[type], function(handler) {
     if (e.propagationStopped_) {
       return;
     }
+
+    // if no selector or matches selector then fire
     if (!handler.selectors.length ||
             goog.array.some(handler.selectors, function(className) {
           return goog.isFunction(className) ?
@@ -94,20 +98,26 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
  */
 mvc.Control.prototype.on = function(
     eventName, fn, opt_className, opt_handler, opt_priority) {
+
+  // initialize
   if (!this.eventHolder_) {
     this.eventHolder_ = {
       listeners: {},
       handlers: {}
     };
   }
-  if (!this.eventHolder_.handlers[eventName])
+  if (!this.eventHolder_.handlers[eventName]) {
     this.eventHolder_.handlers[eventName] = [];
-  if (!this.eventHolder_.listeners[eventName])
+  }
+  if (!this.eventHolder_.listeners[eventName]) {
     this.eventHolder_.listeners[eventName] = this.getHandler().listen(
         this.getElement(), eventName,
         goog.bind(this.handleEvents_, this, eventName));
-  if (!goog.isDef(opt_className))
+  }
+  if (!goog.isDef(opt_className)) {
     opt_className = [];
+  }
+
   var obj = {
     selectors: (goog.isArray(opt_className) ?
         opt_className : [opt_className]),
@@ -117,6 +127,8 @@ mvc.Control.prototype.on = function(
     priority: (opt_priority || 50)
   };
   obj.uid = goog.getUid(obj);
+
+  // insert in array based on priority
   goog.array.insertAt(this.eventHolder_.handlers[eventName], obj,
       goog.array.findIndexRight(this.eventHolder_.handlers[eventName],
       function(obj) {

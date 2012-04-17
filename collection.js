@@ -19,6 +19,8 @@ goog.require('mvc.Model');
  * @param {Object=} opt_options object to apply to new Collection.
  */
 mvc.Collection = function(opt_options) {
+
+  // setup options object
   opt_options = opt_options || {};
   var defaults = {
     'comparator': opt_options['comparator'] || null,
@@ -31,24 +33,37 @@ mvc.Collection = function(opt_options) {
 
   goog.base(this, opt_options);
 
+  /**
+   * @private
+   * @type {Array.<{model:mvc.Model}>}
+   */
+  this.models_ = [];
 
   /**
-     * @private
-     * @type {Array.<{model:mvc.Model}>}
-     */
-  this.models_ = [];
-  /**
-     * @private
-     * @type {?function(mvc.Model, mvc.Model):number}
-     */
+   * @private
+   * @type {?function(mvc.Model, mvc.Model):number}
+   */
   this.comparator_ = defaults['comparator'];
-  this.modelChangeFns_ = [];
-  this.modelChange_ = false;
+
   /**
-     * @private
-     */
+   * @private
+   * @type {Array}
+   */
+  this.modelChangeFns_ = [];
+
+  /**
+   * @private
+   * @type {boolean}
+   */
+  this.modelChange_ = false;
+
+  /**
+   * @private
+   * @type {mvc.Model}
+   */
   this.modelType_ = defaults['modelType'];
 
+  // setup models
   goog.array.forEach(defaults['models'], function(model) {
     this.add(model, undefined, true);
   }, this);
@@ -66,14 +81,21 @@ goog.inherits(mvc.Collection, mvc.Model);
  * otherwise array of values.
  */
 mvc.Collection.prototype.pluck = function(key) {
+
+  // mao to an array
   return goog.array.map(this.models_, function(mod) {
     var model = mod.model;
+
+    // if only one key then return it's value
     if (goog.isString(key))
       return model.get(key);
+
+    // reduce the model to an object with the key/values
     return goog.array.reduce(key, function(map, attr) {
       var val = model.get(attr);
-      if (goog.isDefAndNotNull(val))
+      if (goog.isDefAndNotNull(val)) {
         goog.object.set(map, attr, val);
+      }
       return map;
     }, {});
   });
@@ -112,6 +134,8 @@ mvc.Collection.prototype.sort = function(opt_silent) {
   var changeOrder = false;
   if (this.comparator_) {
     var comp = this.comparator_;
+
+    // need to wrap comparator in function to record a change
     this.models_.sort(function(a, b) {
       var ret = comp(a.model, b.model);
       if (ret < 0)
@@ -128,7 +152,7 @@ mvc.Collection.prototype.sort = function(opt_silent) {
 
 /**
  * accepts a model or array of models and adds them at the end unless an index
- * to insert is given.
+ * to insert is given
  *
  * @param {mvc.Model|Array.<mvc.Model>} model to insert.
  * @param {number=} opt_ind index to insert at.
@@ -136,18 +160,29 @@ mvc.Collection.prototype.sort = function(opt_silent) {
  * @return {boolean} true if inserted, false if already exists.
  */
 mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
+
+  // if array then reverse and then run each model through this function
   if (goog.isArray(model)) {
-    return goog.array.some(model.reverse(), function(mod) {
-      return this.add(mod, opt_ind, opt_silent);
+    var ret = goog.array.some(model.reverse(), function(mod) {
+      return this.add(mod, opt_ind, true);
     }, this);
+    if (ret && !opt_silent)
+      this.change();
+    return ret;
   }
+
+  // check for index and if not there use the length
   if (goog.isNumber(opt_ind) && opt_ind < 0) {
     opt_ind = this.models_.length + opt_ind;
   }
   var insert = false;
+
+  // if model is not in the list
   if (!goog.array.find(this.models_, function(mod) {
     return mod.model == model;
   })) {
+
+    // insert model and setup listeners for changes
     insert = true;
     this.modelChange_ = true;
     var changeId = model.bindAll(goog.bind(this.sort, this, false));
@@ -161,6 +196,7 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
       change: changeId
     }, (opt_ind || this.models_.length));
 
+    // sort list
     this.sort(true);
     if (!opt_silent)
       this.dispatchEvent(goog.events.EventType.CHANGE);
@@ -190,18 +226,27 @@ mvc.Collection.prototype.newModel = function(opt_options, opt_silent) {
  *
  * @param {mvc.Model|Array.<mvc.Model>} model (s) to remove from collection.
  * @param {boolean=} opt_silent to suppress change event.
+ * @return {boolean} whether a model was removed.
  */
 mvc.Collection.prototype.remove = function(model, opt_silent) {
+
+  // if it's an array then run each one through the function
   if (goog.isArray(model)) {
-    goog.array.forEach(model, function(mod) {
-      this.remove(mod, opt_silent);
+    var ret = goog.array.some(model, function(mod) {
+      return this.remove(mod, true);
     }, this);
-    return;
+    if (ret && !opt_silent)
+      this.change();
+    return ret;
   }
+
+  // if the model is in the collection
   var modelObj = goog.array.find(this.models_, function(mod) {
     return mod.model == model;
   });
   if (modelObj) {
+
+    // remove listeners and remove model
     this.modelChange_ = true;
     model.unbind(modelObj.unload);
     model.unbind(modelObj.change);
@@ -211,6 +256,7 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
       this.dispatchEvent(goog.events.EventType.CHANGE);
   }
   this.length = this.models_.length;
+  return modelObj;
 };
 
 
@@ -265,7 +311,6 @@ mvc.Collection.prototype.at = function(index) {
  * @param {boolean=} opt_silent whether to supress change event.
  */
 mvc.Collection.prototype.clear = function(opt_silent) {
-  //this.models_ = [];
   this.remove(this.getModels(), true);
   this.modelChange_ = true;
   if (!opt_silent) {
@@ -302,11 +347,17 @@ mvc.Collection.prototype.unbind = function(id) {
  * @private
  */
 mvc.Collection.prototype.change_ = function() {
+
+  // call change_ for mvc.Model
   goog.base(this, 'change_');
+
+  // if the models have changed then fire listeners
   if (this.modelChange_) {
     goog.array.forEach(this.modelChangeFns_, function(fn) {
       fn(this);
     }, this);
+
+    // if 'models' defined in schema then fire the bound listener.
     if (this.schema_) {
       goog.object.forEach(this.schema_, function(val, key) {
         if (val.models) {

@@ -28,11 +28,13 @@ mvc.Mediator = function() {
  * @param {Array.<string>} messages that the object can broadcast.
  */
 mvc.Mediator.prototype.register = function(obj, messages) {
+
   // each message we save the object reference in an array so we know it
   // can provide that message
   goog.array.forEach(messages, function(message) {
     this.available_[message] = this.available_[message] || [];
     goog.array.insert(this.available_[message], obj);
+
     // if we registered any listeners for a message that can now start we
     // fire it with the object
     if (this.available_[message].length == 1 && this.listeners_[message]) {
@@ -53,11 +55,15 @@ mvc.Mediator.prototype.register = function(obj, messages) {
  * object from being able to broadcast, or undefined to unregister from all.
  */
 mvc.Mediator.prototype.unregister = function(obj, opt_messages) {
+
   // remove the object from all available
   goog.object.forEach(this.available_, function(val, key) {
+
     // if it's not in the messages to remove then skip
-    if (opt_messages && !goog.array.contains(opt_messages, key))
+    if (opt_messages && !goog.array.contains(opt_messages, key)) {
       return;
+    }
+
     // remove and if the last to be removed from a message call dispose
     // methods for listening objects
     if (goog.array.remove(val, obj) && !val.length) {

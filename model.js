@@ -22,6 +22,8 @@ goog.require('goog.object');
  * schema and sync.
  */
 mvc.Model = function(opt_options) {
+
+  // setup the defaults
   var defaults = {
     'schema': {},
     'sync': null,
@@ -43,20 +45,23 @@ mvc.Model = function(opt_options) {
 
 
   /**
-     * @private
-     * @type {Object.<string, ?Object>}
-     */
+   * @private
+   * @type {Object.<string, ?Object>}
+   */
   this.attr_ = {};
+
   /**
-     * @private
-     * @type {Object.<{attr: Array.<string>, fn: Function}>}
-     */
+   * @private
+   * @type {Object.<{attr: Array.<string>, fn: Function}>}
+   */
   this.formats_ = {};
+
   /**
-     * @private
-     * @type {Object.<string, ?Object>}
-     */
+   * @private
+   * @type {Object.<string, ?Object>}
+   */
   this.prev_ = {};
+
   /**
      * @private
      * @type {Object}
@@ -74,9 +79,9 @@ mvc.Model = function(opt_options) {
   this.changeHandler_ = goog.events.listen(this,
       goog.events.EventType.CHANGE, this.change_, false, this);
   /**
-     * @private
-     * @type {string}
-     */
+   * @private
+   * @type {string}
+   */
   this.cid_ = '' + goog.getUid(this);
 
   this.set(defaults['attr'], true);
@@ -98,21 +103,27 @@ mvc.Model.Compare = {
    * @return {boolean} whether they are equal.
    */
   RECURSIVE: function(a, b) {
+
+    // if a and b are objects then recurse through keys and check values
     if (goog.isObject(a)) {
       if (goog.isObject(b)) {
         var aKeys = goog.object.getKeys(a);
         var bKeys = goog.object.getKeys(b);
-        if (!goog.array.equals(aKeys, bKeys))
+        if (!goog.array.equals(aKeys, bKeys)) {
           return false;
+        }
         for (var i = 0; i < aKeys.length; i++) {
-          if (!mvc.Model.Compare.RECURSIVE(a[aKeys[i]], b[bKeys[i]]))
+          if (!mvc.Model.Compare.RECURSIVE(a[aKeys[i]], b[bKeys[i]])) {
             return false;
+          }
         }
         return true;
-      } else
+      } else {
         return false;
-    } else if (goog.isObject(b))
+      }
+    } else if (goog.isObject(b)) {
       return false;
+    }
     return a === b;
   },
   /**
@@ -157,33 +168,42 @@ mvc.Model.prototype.getCid = function() {
  */
 mvc.Model.prototype.parseSchemaFn_ = function(fn) {
   var val = fn;
+
+  // converts string to function
   if (goog.isString(fn)) {
     var fns = {
       'number': goog.isNumber,
       'string': goog.isString,
       'array': goog.isArrayLike
     };
-    val = function(val) {
-            if (!fns[fn.toLowerCase])
-        throw new Error(fn);
-            return val;
+    return function(value) {
+      if (!fns[fn.toLowerCase()](value))
+        throw new Error('value not a ' + fn);
+      return value;
     };
-  }else if (val.exec) {
-    val = goog.bind(function(regex, value, mod) {
-            if (goog.isNull(regex.exec(value)))
-        throw new Error();
-            return val;}, this, fn);
+  } else if (val.exec) {
+
+    // convert regex to function
+    return goog.bind(function(regex, value, mod) {
+      if (goog.isNull(regex.exec(value))) {
+        throw new Error(regex + 'note matched');
+      }
+      return value;}, this, fn);
   } else if (goog.isFunction(val) &&
       goog.object.getKeys(val.prototype).length) {
+
+    // convert constructor function to check type
     val = function(val) {
-            if (val.constructor == fn)
+      if (val.constructor == fn) {
         return val;
-            while (val.superClass_) {
+      }
+      while (val.superClass_) {
         val = val.superClass_.constructor;
-        if (val == fn)
+        if (val == fn) {
           return val;
-            }
-            throw new Error();
+        }
+      }
+      throw new Error('not of type:\n' + fn);
     };
   }
   return /** @type {Function} */(val);
@@ -243,6 +263,8 @@ mvc.Model.prototype.reset = function(opt_silent) {
  * @return {*} the value of the key.
  */
 mvc.Model.prototype.get = function(key, opt_default) {
+
+  // if a getter is defined in a schema then use that
   if (this.schema_[key] && this.schema_[key].get) {
     var get = this.schema_[key].get.apply(this, goog.array.map(
         this.schema_[key].require || [], function(requireKey) {
@@ -312,6 +334,8 @@ mvc.Model.prototype.has = function(key) {
  * @return {boolean} return if succesful.
  */
 mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
+
+  // handle key value as string or object
   var success = false;
   if (goog.isString(key)) {
     var temp = {};
@@ -320,6 +344,8 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
   } else {
     opt_silent = /** @type {boolean} */(opt_val);
   }
+
+  // for each key:value try to set using schema else set directly
   goog.object.forEach(key, function(val, key) {
     if (!this.schema_ || !goog.isDef(val)) {
       this.attr_[key] = val;
@@ -336,6 +362,9 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
       }
     }
   }, this);
+
+  // if it was successful and not silent then fire change and then set
+  // previous values
   if (success) {
     if (!opt_silent) {
       this.dispatchEvent(goog.events.EventType.CHANGE);
@@ -378,6 +407,8 @@ mvc.Model.prototype.change = function() {
  * @return {*} the previous value.
  */
 mvc.Model.prototype.prev = function(key) {
+
+  // use schema if one is defined
   if (this.schema_[key] && this.schema_[key].get) {
     var get = this.schema_[key].get.apply(this, goog.array.map(
         this.schema_[key].require || [], function(requireKey) {
@@ -468,6 +499,7 @@ mvc.Model.prototype.setter = function(attr, fn) {
  */
 mvc.Model.prototype.getChanges = function() {
 
+  // use schema to look for differences
   var ret = goog.object.getKeys(goog.object.filter(this.schema_,
       function(val, key) {
         if (this.schema_[key].cmp)
@@ -478,6 +510,8 @@ mvc.Model.prototype.getChanges = function() {
         }
         return this.prev(key) != this.get(key);
       }, this));
+
+  // look through actual attribute values
   goog.array.extend(ret, goog.object.getKeys(goog.object.filter(this.attr_,
       function(val, key) {
         if (goog.isDef(this.schema_[key]))
@@ -497,7 +531,7 @@ mvc.Model.prototype.getChanges = function() {
  * @param {boolean=} opt_silent whether to fire change event.
  * @return {mvc.Model} with it's attributes reverted to previous change.
  */
-mvc.Model.prototype.revert = function(opt_silent) {
+mvc.Model.prototype.revert = function(key, opt_silent) {
   var newAttr = {};
   goog.object.extend(newAttr, goog.object.map(this.prev_, function(val) {
     return {val: val, prev: null};

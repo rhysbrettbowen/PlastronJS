@@ -278,6 +278,23 @@ mvc.Model.Compare.STRING;
 mvc.Model.Compare.SERIALIZE;
 ```
 
+### collection schema ###
+
+If you're using an mvc.Collection then you can also include in a 'models: true' parameter which lets the collection know that the parameter is computed using the model list. This is for computed values that use the list of models. For instance if you have a list of images you may want to get the first image as a thumbnail:
+
+```javascript
+{
+  'thumbnail': {
+    get: function() {
+      return this.at(0);
+    },
+    models: true
+  }
+}
+```
+
+of course you can also still require other attributes to pass in as well.
+
 ## mvc.Collection ##
 
 A mvc.Collection extends mvc.Model and so has all of it's properties. Also a collection can contain an array of models that belong to it. A collection can keep these models in an order if given a comparator function.
@@ -516,6 +533,8 @@ you can then run the tests by going to:
 - new name
 - tests with plovr
 - add in comparison ability for schema
+- more comments
+- fix parsing schema functions
 
 #### v0.9 ####
 
