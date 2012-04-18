@@ -204,6 +204,8 @@ mvc.Control.prototype.off = function(uid) {
  * @return {?goog.array.ArrayLike} elements found.
  */
 mvc.Control.prototype.getEls = function(selector) {
+  if (selector.charAt(0) == '-')
+    selector = '.' + selector.substring(1);
   if (selector.charAt(0) == '.') {
     return goog.dom.getElementsByClass(selector.substring(1),
         /** @type {Element} */(this.getElement())) || [];

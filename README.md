@@ -535,6 +535,7 @@ you can then run the tests by going to:
 - add in comparison ability for schema
 - more comments
 - fix parsing schema functions
+- fix add and remove array of models
 
 #### v0.9 ####
 
@@ -546,6 +547,7 @@ you can then run the tests by going to:
 - can unbind listeners on collection model change
 - getBinder reworked so can use as getter and setters
 - control.on accepts a function as well as classname to define see if a handler should run
+- can use - instead of . for classname in getEls selector
 
 #### v0.8 ####
 
