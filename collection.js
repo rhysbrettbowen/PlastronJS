@@ -59,7 +59,7 @@ mvc.Collection = function(opt_options) {
 
   /**
    * @private
-   * @type {mvc.Model}
+   * @type {function(new:mvc.Model, Object=)}
    */
   this.modelType_ = defaults['modelType'];
 
@@ -256,7 +256,7 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
       this.dispatchEvent(goog.events.EventType.CHANGE);
   }
   this.length = this.models_.length;
-  return modelObj;
+  return !!modelObj;
 };
 
 

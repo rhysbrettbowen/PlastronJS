@@ -535,7 +535,6 @@ you can then run the tests by going to:
 - add in comparison ability for schema
 - more comments
 - fix parsing schema functions
-- more tests
 
 #### v0.9 ####
 

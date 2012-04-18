@@ -210,7 +210,6 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
   return /** @type {Function} */(val);
 };
 
-
 /**
  * instead of doing: model = new mvc.Model(options);
  * you can do: mvc.Model.create(options);
@@ -528,11 +527,12 @@ mvc.Model.prototype.getChanges = function() {
 
 /**
  * reverts an object's values to it's last fetch
+ * TODO: allow to revert only certain keys
  *
  * @param {boolean=} opt_silent whether to fire change event.
  * @return {mvc.Model} with it's attributes reverted to previous change.
  */
-mvc.Model.prototype.revert = function(key, opt_silent) {
+mvc.Model.prototype.revert = function(opt_silent) {
   var newAttr = {};
   goog.object.extend(newAttr, goog.object.map(this.prev_, function(val) {
     return {val: val, prev: null};
