@@ -161,21 +161,43 @@ mvc.Collection.prototype.sort = function(opt_silent) {
  */
 mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
 
-  // if array then reverse and then run each model through this function
-  if (goog.isArray(model)) {
-    var ret = goog.array.some(model.reverse(), function(mod) {
-      return this.add(mod, opt_ind, true);
-    }, this);
-    if (ret && !opt_silent)
-      this.change();
-    return ret;
-  }
-
   // check for index and if not there use the length
   if (goog.isNumber(opt_ind) && opt_ind < 0) {
     opt_ind = this.models_.length + opt_ind;
   }
   var insert = false;
+
+  // if array then reverse and then run each model through this function
+  if (goog.isArray(model)) {
+    insert = goog.array.forEach(model.reverse(), function(mod) {
+      if (!goog.array.find(this.models_, function(mod) {
+        return mod.model == model;
+      })) {
+
+        // insert model and setup listeners for changes
+        insert = true;
+        this.modelChange_ = true;
+        var changeId = model.bindAll(goog.bind(this.sort, this, false));
+        var unloadId = model.bindUnload(function(e) {
+          this.remove(model);
+        }, this);
+
+        goog.array.insertAt(this.models_, {
+          model: model,
+          unload: unloadId,
+          change: changeId
+        }, (opt_ind || this.models_.length));
+
+      }
+    }, this);
+    this.sort(true);
+    this.length = this.models_.length;
+    if (insert && !opt_silent)
+      this.change();
+    return insert;
+  }
+
+
 
   // if model is not in the list
   if (!goog.array.find(this.models_, function(mod) {
@@ -199,7 +221,7 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
     // sort list
     this.sort(true);
     if (!opt_silent)
-      this.dispatchEvent(goog.events.EventType.CHANGE);
+      this.change();
   }
   this.length = this.models_.length;
   return insert;
@@ -232,9 +254,23 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
 
   // if it's an array then run each one through the function
   if (goog.isArray(model)) {
-    var ret = goog.array.some(model, function(mod) {
-      return this.remove(mod, true);
+    var ret = false;
+    goog.array.forEach(model, function(model) {
+      var modelObj = goog.array.find(this.models_, function(mod) {
+        return mod.model == model;
+      });
+      if (modelObj) {
+
+        // remove listeners and remove model
+        this.modelChange_ = true;
+        model.unbind(modelObj.unload);
+        model.unbind(modelObj.change);
+        goog.array.remove(this.models_, modelObj);
+        ret = true;
+      }
     }, this);
+    this.length = this.models_.length;
+    this.sort(true);
     if (ret && !opt_silent)
       this.change();
     return ret;
