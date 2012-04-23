@@ -53,6 +53,12 @@ mvc.Collection = function(opt_options) {
 
   /**
    * @private
+   * @type {Array}
+   */
+  this.anyModelChangeFns_ = [];
+
+  /**
+   * @private
    * @type {boolean}
    */
   this.modelChange_ = false;
@@ -138,13 +144,13 @@ mvc.Collection.prototype.sort = function(opt_silent) {
     // need to wrap comparator in function to record a change
     this.models_.sort(function(a, b) {
       var ret = comp(a.model, b.model);
-      if (ret < 0)
+      if (ret > 0)
         changeOrder = true;
       return ret;
     });
-    this.modelChange_ = true;
+    this.modelChange_ = this.modelChange_ || changeOrder;
   }
-  if (!opt_silent && changeOrder) {
+  if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
   }
 };
@@ -177,7 +183,11 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
         // insert model and setup listeners for changes
         insert = true;
         this.modelChange_ = true;
-        var changeId = model.bindAll(goog.bind(this.sort, this, false));
+        this.anyModelChange_ = true;
+        var changeId = model.bindAll(goog.bind(function() {
+          this.anyModelChange_ = true;
+          this.sort();
+        }, this));
         var unloadId = model.bindUnload(function(e) {
           this.remove(model);
         }, this);
@@ -207,7 +217,11 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
     // insert model and setup listeners for changes
     insert = true;
     this.modelChange_ = true;
-    var changeId = model.bindAll(goog.bind(this.sort, this, false));
+    this.anyModelChange_ = true;
+    var changeId = model.bindAll(goog.bind(function() {
+      this.anyModelChange_ = true;
+      this.sort();
+    }, this, false));
     var unloadId = model.bindUnload(function(e) {
       this.remove(model);
     }, this);
@@ -263,6 +277,7 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
 
         // remove listeners and remove model
         this.modelChange_ = true;
+        this.anyModelChange_ = true;
         model.unbind(modelObj.unload);
         model.unbind(modelObj.change);
         goog.array.remove(this.models_, modelObj);
@@ -357,7 +372,7 @@ mvc.Collection.prototype.clear = function(opt_silent) {
 
 
 /**
- * use this to bind functions to a change in any of the collections models
+ * use this to bind functions to a change that effects the order or collection
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
@@ -366,6 +381,20 @@ mvc.Collection.prototype.clear = function(opt_silent) {
 mvc.Collection.prototype.modelChange = function(fn, opt_handler) {
   var func = goog.bind(fn, (opt_handler || this));
   this.modelChangeFns_.push(func);
+  return goog.getUid(func);
+};
+
+
+/**
+ * use this to bind functions to a change in any of the collections models
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {number} uid to use with unbind.
+ */
+mvc.Collection.prototype.anyModelChange = function(fn, opt_handler) {
+  var func = goog.bind(fn, (opt_handler || this));
+  this.anyModelChangeFns_.push(func);
   return goog.getUid(func);
 };
 
@@ -393,6 +422,14 @@ mvc.Collection.prototype.change_ = function() {
     goog.array.forEach(this.modelChangeFns_, function(fn) {
       fn(this);
     }, this);
+    this.modelChange_ = false;
+  }
+
+  // if the models have changed any values then fire listeners
+  if (this.anyModelChange_) {
+    goog.array.forEach(this.anyModelChangeFns_, function(fn) {
+      fn(this);
+    }, this);
 
     // if 'models' defined in schema then fire the bound listener.
     if (this.schema_) {
@@ -409,6 +446,6 @@ mvc.Collection.prototype.change_ = function() {
         }
       }, this);
     }
-    this.modelChange_ = false;
+    this.anyModelChange_ = false;
   }
 };

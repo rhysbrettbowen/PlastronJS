@@ -339,6 +339,7 @@ A collection also offers these aditional methods:
 - at(index): return the model at an index
 - clear: clears all the models
 - modelChange(function, handler): like bind for model but is bound only on changes to the collections children being sorted or added/removed
+- anyModelChange(function, handler): similar to modelChange but will fire when any model is changed regardless of it it updates sort order
 
 ## mvc.Store ##
 
@@ -536,6 +537,8 @@ you can then run the tests by going to:
 - more comments
 - fix parsing schema functions
 - fix add and remove array of models
+- can use - instead of . for classname selector
+- added anyModelChange function
 
 #### v0.9 ####
 
@@ -547,7 +550,6 @@ you can then run the tests by going to:
 - can unbind listeners on collection model change
 - getBinder reworked so can use as getter and setters
 - control.on accepts a function as well as classname to define see if a handler should run
-- can use - instead of . for classname in getEls selector
 
 #### v0.8 ####
 
