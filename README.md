@@ -1,6 +1,10 @@
 # PlastronJS #
 formerly goog.mvc
 
+I've given the project v1 beta status which means that it's mostly tested but not used in production yet and the existing API is unlikely to change (if it does I'll provide backwards compatability until v2 - if one is ever made, I have some plans for future revisions) and any new additions wil get a .x version number. And bug fixes will get a .x.X version number.
+
+I'm using it as the foundation of Catch.com's new webclient which will be much shinier and more interactive than possible with the old codebase and will move the project to release once the new site is in production (later in 2012).
+
 PlastronJS is an MVC library which uses the Google Closure library for use with the Closure Compiler. I've decided to call it Plastron after the name of the underside of the turtle to mimic names of frameworks like Backbone and Spine but also because it's a good base to build upon.
 
 PlastronJS though is not just a MVC framework, it's the start of an application framework. I've decided to include a mediator and a store with the package which will hopefully help in the construction of medium to large size applications.
