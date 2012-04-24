@@ -537,7 +537,8 @@ mvc.Model.prototype.getChanges = function() {
  * @return {mvc.Model} with it's attributes reverted to previous change.
  */
 mvc.Model.prototype.revert = function(opt_silent) {
-  this.attr_ = goog.object.unsafeClone(this.prev_);
+  this.attr_ = /** @type {Object.<string, ?Object>} */
+      (goog.object.unsafeClone(this.prev_));
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
   }
@@ -706,5 +707,4 @@ mvc.Model.prototype.bindAll = function(fn, opt_handler) {
   goog.object.set(this.boundAll_, '' + id, bound);
   return id;
 };
-
 
