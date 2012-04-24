@@ -10,11 +10,11 @@ The source code should be well documented and I plan on including tutorials on m
 The folder should be put in your project directory and the path passed to the closure compiler. I have my project folder setup like this:
 
     myApp/
-        js/ <- your main app code here.
-        lib/ <- libraries you use here.
-            mvc/ <- PlastronJS here.
-        styles/ <- CSS/GSS/SASS etc.
-        template/ <- Soy files here.
+        js/ *<- your main app code here.*
+        lib/ *<- libraries you use here.*
+            mvc/ *<- PlastronJS here.*
+        styles/ *<- CSS/GSS/SASS etc.*
+        template/ *<- Soy files here.*
 
 to use a module you'll need to include it
 

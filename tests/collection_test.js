@@ -1,27 +1,26 @@
+goog.require('goog.testing.PropertyReplacer');
+goog.require('goog.testing.jsunit');
 goog.require('mvc.Collection');
 goog.require('mvc.Model');
 
-goog.require('goog.testing.PropertyReplacer');
-goog.require('goog.testing.jsunit');
 
-/** @type {mvc.Model} */
 var model1, model2, model3;
 
 var setUp = function() {
-  model1 = new mvc.Model({'sort':3});
-  model2 = new mvc.Model({'sort':1});
-  model3 = new mvc.Model({'sort':2});
+  model1 = new mvc.Model({'sort': 3});
+  model2 = new mvc.Model({'sort': 1});
+  model3 = new mvc.Model({'sort': 2});
 };
 
 var testUnsortedCollection = function() {
-  var test = new mvc.Collection({'models':[model1, model2, model3]});
+  var test = new mvc.Collection({'models': [model1, model2, model3]});
   assertEquals('first object should be mock 1', test.at(0), model1);
   assertEquals('second object should be mock 2', test.at(1), model2);
   assertEquals('third object should be mock 3', test.at(2), model3);
 };
 
 var testSortedCollection = function() {
-  var sort = function(a, b) {return a.get('sort')-b.get('sort');};
+  var sort = function(a, b) {return a.get('sort') - b.get('sort');};
   var test = new mvc.Collection();
   test.setComparator(sort);
   test.add(model1);
@@ -36,8 +35,8 @@ var testSortedCollection = function() {
 };
 
 var testNewSortedCollection = function() {
-  var sort = function(a, b) {return a.get('sort')-b.get('sort');};
-  var test = new mvc.Collection({'models':[model1,model2,model3]});
+  var sort = function(a, b) {return a.get('sort') - b.get('sort');};
+  var test = new mvc.Collection({'models': [model1, model2, model3]});
   test.setComparator(sort);
   assertEquals('first object should be mock 2', test.at(0), model2);
   assertEquals('second object should be mock 3', test.at(1), model3);
@@ -69,7 +68,7 @@ var testPluck = function() {
   });
   assertEquals('array should be [1,2,3]',
       coll.pluck('a').toString(),
-      [1,2,3].toString());
+      [1, 2, 3].toString());
   var b = coll.pluck(['a', 'b']);
   assert('array should hold object with a, and b',
       b[0]['a'] == 1 &&
@@ -97,7 +96,7 @@ var testLengthUpdate = function() {
 
 var testGetById = function() {
   var coll = new mvc.Collection();
-  var mod = coll.newModel({'id':'123'});
+  var mod = coll.newModel({'id': '123'});
   assertEquals(coll.getById('123'), mod);
 };
 

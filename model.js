@@ -84,7 +84,7 @@ mvc.Model = function(opt_options) {
    */
   this.cid_ = '' + goog.getUid(this);
 
-  this.set(defaults['attr'], true);
+  this.set(defaults['attr']);
 
   this.dispatchEvent(goog.events.EventType.LOAD);
 };
@@ -194,7 +194,7 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
 
     // convert constructor function to check type
     val = function(val) {
-      var currClass = Object.getPrototypeOf(val).constructor ;
+      var currClass = Object.getPrototypeOf(val).constructor;
       if (Object.getPrototypeOf(val).constructor == fn) {
         return val;
       }
@@ -209,6 +209,7 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
   }
   return /** @type {Function} */(val);
 };
+
 
 /**
  * instead of doing: model = new mvc.Model(options);
@@ -286,7 +287,7 @@ mvc.Model.prototype.get = function(key, opt_default) {
  * @return {boolean} if the id hasn't been set then true.
  */
 mvc.Model.prototype.isNew = function() {
-  return !this.get('id');
+  return goog.isDef(this.get('id'));
 };
 
 
@@ -306,6 +307,7 @@ mvc.Model.prototype.setSchema = function(schema) {
  * @param {Object} schema to add rules from.
  */
 mvc.Model.prototype.addSchemaRules = function(schema) {
+  this.schema_ = goog.object.clone(this.schema_);
   goog.object.forEach(schema, function(val, key) {
     if (this.schema_[key])
       goog.object.extend(this.schema_[key], goog.object.clone(schema[key]));
@@ -320,7 +322,9 @@ mvc.Model.prototype.addSchemaRules = function(schema) {
  * @return {boolean} whether key exists.
  */
 mvc.Model.prototype.has = function(key) {
-  return goog.object.containsKey(this.attr_, key);
+  return (goog.object.containsKey(this.attr_, key) ||
+      goog.object.containsKey(this.schema_, key)) &&
+      goog.isDef(this.get(key));
 };
 
 
@@ -533,18 +537,9 @@ mvc.Model.prototype.getChanges = function() {
  * @return {mvc.Model} with it's attributes reverted to previous change.
  */
 mvc.Model.prototype.revert = function(opt_silent) {
-  var newAttr = {};
-  goog.object.extend(newAttr, goog.object.map(this.prev_, function(val) {
-    return {val: val, prev: null};
-  }));
-  goog.object.forEach(this.attr_, function(val, key) {
-    if (key in newAttr) {
-      newAttr[key].prev = val;
-    }
-  });
+  this.attr_ = goog.object.unsafeClone(this.prev_);
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
-    this.prev_ = goog.object.clone(this.attr_);
   }
   return this;
 };
@@ -690,7 +685,7 @@ mvc.Model.prototype.bind = function(name, fn, opt_handler) {
  */
 mvc.Model.prototype.unbind = function(id) {
   return goog.array.removeIf(this.bound_, function(bound) {
-    return (bound.id == id);
+    return (bound.cid == id);
   }) || goog.object.remove(this.boundAll_, id) ||
       goog.array.removeIf(this.onUnload_, function(fn) {
         return goog.getUid(fn) == id;
