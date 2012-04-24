@@ -526,6 +526,11 @@ you can then run the tests by going to:
 
 ### changelog ###
 
+### v1.0 beta ###
+
+- more tests
+- fix behaviour for prev and revert
+
 ### v1.0a ###
 
 - alpha release
