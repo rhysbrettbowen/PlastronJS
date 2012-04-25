@@ -553,7 +553,7 @@ mvc.Model.prototype.dispose = function(opt_sync) {
   if (opt_sync)
     this.sync_.del(this);
   this.dispatchEvent(goog.events.EventType.UNLOAD);
-  goog.array.forEach(this.onUnload_, function(fn) {
+  goog.array.forEach(goog.array.clone(this.onUnload_), function(fn) {
     fn(this);
   }, this);
   this.disposeInternal();

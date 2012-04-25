@@ -299,6 +299,7 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
 
     // remove listeners and remove model
     this.modelChange_ = true;
+    this.anyModelChange_ = true;
     model.unbind(modelObj.unload);
     model.unbind(modelObj.change);
     goog.array.remove(this.models_, modelObj);
@@ -419,7 +420,7 @@ mvc.Collection.prototype.change_ = function() {
 
   // if the models have changed then fire listeners
   if (this.modelChange_) {
-    goog.array.forEach(this.modelChangeFns_, function(fn) {
+    goog.array.forEach(goog.array.clone(this.modelChangeFns_), function(fn) {
       fn(this);
     }, this);
     this.modelChange_ = false;
@@ -427,7 +428,7 @@ mvc.Collection.prototype.change_ = function() {
 
   // if the models have changed any values then fire listeners
   if (this.anyModelChange_) {
-    goog.array.forEach(this.anyModelChangeFns_, function(fn) {
+    goog.array.forEach(goog.array.clone(this.anyModelChangeFns_), function(fn) {
       fn(this);
     }, this);
 
