@@ -351,8 +351,10 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
   // for each key:value try to set using schema else set directly
   goog.object.forEach(key, function(val, key) {
-    if (!this.schema_ || !goog.isDef(val)) {
+    if (!goog.isDef(val)) {
       this.attr_[key] = val;
+      if (this.prev_[key] != this.attr_[key])
+        success = true;
     } else {
       try {
         if (this.schema_[key] && this.schema_[key].set)
