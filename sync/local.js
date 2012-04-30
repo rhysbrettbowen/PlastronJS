@@ -41,7 +41,8 @@ mvc.LocalSync.prototype.create = function(model, opt_callback) {
  * @inheritDoc
  */
 mvc.LocalSync.prototype.read = function(model, opt_callback) {
-  model.set(this.store_.get(model.get('id')));
+  model.set(/** @type {Object} */(this.store_.get(
+      /** @type {string} */(model.get('id')))));
 };
 
 
@@ -49,7 +50,7 @@ mvc.LocalSync.prototype.read = function(model, opt_callback) {
  * @inheritDoc
  */
 mvc.LocalSync.prototype.update = function(model, opt_callback) {
-  this.store_.set(model.get('id'), model.toJson());
+  this.store_.set(/** @type {string} */(model.get('id')), model.toJson());
 };
 
 
@@ -57,5 +58,5 @@ mvc.LocalSync.prototype.update = function(model, opt_callback) {
  * @inheritDoc
  */
 mvc.LocalSync.prototype.del = function(model, opt_callback) {
-  this.store_.remove(model.get('id'));
+  this.store_.remove(/** @type {string} */(model.get('id')));
 };

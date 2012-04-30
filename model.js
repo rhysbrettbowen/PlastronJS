@@ -287,7 +287,7 @@ mvc.Model.prototype.get = function(key, opt_default) {
  * @return {boolean} if the id hasn't been set then true.
  */
 mvc.Model.prototype.isNew = function() {
-  return goog.isDef(this.get('id'));
+  return !goog.isDef(this.get('id'));
 };
 
 
