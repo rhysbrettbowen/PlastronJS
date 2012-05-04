@@ -25,6 +25,7 @@ mvc.Control = function(model) {
     listeners: {},
     handlers: {}
   };
+  this.modelListeners_ = [];
 };
 goog.inherits(mvc.Control, goog.ui.Component);
 
@@ -218,4 +219,85 @@ mvc.Control.prototype.getEls = function(selector) {
       /** @type {Element} */(this.getElement()));
 };
 
+
+/**
+ * Allows easy binding of a model's attribute to an element or a function.
+ * bind('name', function(value), handler) allows you to run a function and
+ * optionally bind it to the handler. You can also pass in an array of names
+ * to listen for a change on any of the attributes.
+ *
+ * @param {Array|string} name of attributes to listen to.
+ * @param {Function} fn function to run when change.
+ * @param {*=} opt_handler object for 'this' of function.
+ * @return {number} id to use for unbind.
+ */
+mvc.Control.prototype.bind = function(name, fn, opt_handler) {
+  var id = this.getModel().bind(name, fn, opt_handler);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * bind to any change event
+ *
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {number} id to use for unbind.
+ */
+mvc.Control.prototype.bindAll = function(fn, opt_handler) {
+  var id = this.getModel().bindAll(fn, opt_handler);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * use this to bind functions to a change in any of the collections models
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {number} uid to use with unbind.
+ */
+mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
+  var id = this.getModel().anyModelChange(fn, opt_handler);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * use this to bind functions to a change in any of the collections models
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {number} uid to use with unbind.
+ */
+mvc.Control.prototype.modelChange = function(fn, opt_handler) {
+  var id = this.getModel().modelChange(fn, opt_handler);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * unbind a listener by id
+ *
+ * @param {number} id returned form bind or bindall.
+ * @return {boolean} if found and removed.
+ */
+mvc.Control.prototype.unbind = function(id) {
+  return this.getModel().unbind(id);
+};
+
+/**
+ * @inheritDoc
+ */
+mvc.Control.prototype.disposeInternal = function() {
+  goog.array.forEach(this.modelListeners_, function(id) {
+    this.unbind(id);
+  }, this);
+  this.eventHolder_ = null;
+  goog.base(this, 'disposeInternal');
+};
 

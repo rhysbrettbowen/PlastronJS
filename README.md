@@ -470,6 +470,27 @@ this.getModel().bind('star', function(star) {
 
 now clicking on the star button will change the star attribute and that will in turn change the class on the star Button. There are lots of ways to match up the bindings.
 
+### bind to a model ###
+
+you caninstead of doing this:
+
+```javascript
+this.getModel().bind('star', myFunc, this);
+```
+
+you should call it directly on the control:
+
+```javascript
+this.bind('star', myFunc, this);
+```
+
+You can call the bind, bindAll, modelChange, anyModelChange directly on
+the control for the model. This makes it easier to access but will also
+associate that listener with the control so when the control is disposed
+those event listeners will be removed from the model.
+
+You can also unbind directly on the control.
+
 ## mvc.Sync ##
 
 This is an interface that should have a custom implementation. Two simple implementations have been given called mvc.AjaxSync and mvc.LocalSync. The purpose of sync is to be the glue between the model and the dataStore.
@@ -536,6 +557,7 @@ you can then run the tests by going to:
 
 - more tests
 - fix behaviour for prev and revert
+- add binding methods and cleanup on mvc.Control
 
 ### v1.0a ###
 
