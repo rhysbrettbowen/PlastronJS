@@ -232,7 +232,7 @@ mvc.Control.prototype.getEls = function(selector) {
  * @return {number} id to use for unbind.
  */
 mvc.Control.prototype.bind = function(name, fn, opt_handler) {
-  var id = this.getModel().bind(name, fn, opt_handler);
+  var id = this.getModel().bind(name, fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -246,7 +246,19 @@ mvc.Control.prototype.bind = function(name, fn, opt_handler) {
  * @return {number} id to use for unbind.
  */
 mvc.Control.prototype.bindAll = function(fn, opt_handler) {
-  var id = this.getModel().bindAll(fn, opt_handler);
+  var id = this.getModel().bindAll(fn, opt_handler || this);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * @param {Function} fn function to run when model is disposed.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {number} id to use for unbind.
+ */
+mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
+  var id = this.getModel().bindUnload(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -260,7 +272,7 @@ mvc.Control.prototype.bindAll = function(fn, opt_handler) {
  * @return {number} uid to use with unbind.
  */
 mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
-  var id = this.getModel().anyModelChange(fn, opt_handler);
+  var id = this.getModel().anyModelChange(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -274,7 +286,7 @@ mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
  * @return {number} uid to use with unbind.
  */
 mvc.Control.prototype.modelChange = function(fn, opt_handler) {
-  var id = this.getModel().modelChange(fn, opt_handler);
+  var id = this.getModel().modelChange(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
