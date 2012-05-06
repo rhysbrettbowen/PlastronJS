@@ -253,6 +253,34 @@ mvc.Control.prototype.bindAll = function(fn, opt_handler) {
 
 
 /**
+ * bind to any change event
+ *
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {number} id to use for unbind.
+ */
+mvc.Control.prototype.bindAdd = function(fn, opt_handler) {
+  var id = this.getModel().bindAdd(fn, opt_handler || this);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
+ * bind to any change event
+ *
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {number} id to use for unbind.
+ */
+mvc.Control.prototype.bindRemove = function(fn, opt_handler) {
+  var id = this.getModel().bindRemove(fn, opt_handler || this);
+  this.modelListeners_.push(id);
+  return id;
+};
+
+
+/**
  * @param {Function} fn function to run when model is disposed.
  * @param {Object=} opt_handler object for 'this' of function.
  * @return {number} id to use for unbind.

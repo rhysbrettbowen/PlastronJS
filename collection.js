@@ -31,8 +31,6 @@ mvc.Collection = function(opt_options) {
   goog.object.remove(opt_options, 'modelType');
   goog.object.remove(opt_options, 'models');
 
-  goog.base(this, opt_options);
-
   /**
    * @private
    * @type {Array.<{model:mvc.Model}>}
@@ -57,6 +55,35 @@ mvc.Collection = function(opt_options) {
    */
   this.anyModelChangeFns_ = [];
 
+
+  /**
+   * @private
+   * @type {Array}
+   */
+  this.addedModels_ = [];
+
+
+  /**
+   * @private
+   * @type {Array}
+   */
+  this.addedModelsFns_ = [];
+
+
+  /**
+   * @private
+   * @type {Array}
+   */
+  this.removedModels_ = [];
+
+
+  /**
+   * @private
+   * @type {Array}
+   */
+  this.removedModelsFns_ = [];
+
+
   /**
    * @private
    * @type {boolean}
@@ -68,6 +95,8 @@ mvc.Collection = function(opt_options) {
    * @type {function(new:mvc.Model, Object=)}
    */
   this.modelType_ = defaults['modelType'];
+
+  goog.base(this, opt_options);
 
   // setup models
   goog.array.forEach(defaults['models'], function(model) {
@@ -197,11 +226,12 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
           unload: unloadId,
           change: changeId
         }, (opt_ind || this.models_.length));
+        goog.array.insert(this.addedModels_, model);
 
       }
     }, this);
-    this.sort(true);
     this.length = this.models_.length;
+    this.sort(true);
     if (insert && !opt_silent)
       this.change();
     return insert;
@@ -231,6 +261,7 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
       unload: unloadId,
       change: changeId
     }, (opt_ind || this.models_.length));
+    goog.array.insert(this.addedModels_, model);
 
     // sort list
     this.sort(true);
@@ -282,6 +313,10 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
         model.unbind(modelObj.change);
         goog.array.remove(this.models_, modelObj);
         ret = true;
+        goog.array.insert(this.removedModels_, {
+          model: modelObj,
+          id: modelObj.get('id') || modelObj.getCid()
+        });
       }
     }, this);
     this.length = this.models_.length;
@@ -302,7 +337,11 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
     this.anyModelChange_ = true;
     model.unbind(modelObj.unload);
     model.unbind(modelObj.change);
-    goog.array.remove(this.models_, modelObj);
+    goog.array.insert(this.removedModels_, modelObj);
+    goog.array.remove(this.models_, {
+          model: modelObj,
+          id: modelObj.get('id') || modelObj.getCid()
+        });
     this.sort(true);
     if (!opt_silent)
       this.dispatchEvent(goog.events.EventType.CHANGE);
@@ -401,6 +440,34 @@ mvc.Collection.prototype.anyModelChange = function(fn, opt_handler) {
 
 
 /**
+ * use this to bind function when a model is added
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {number} uid to use with unbind.
+ */
+mvc.Collection.prototype.bindAdd = function(fn, opt_handler) {
+  var func = goog.bind(fn, (opt_handler || this));
+  this.addedModelsFns_.push(func);
+  return goog.getUid(func);
+};
+
+
+/**
+ * use this to bind functions when a model is removed
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {number} uid to use with unbind.
+ */
+mvc.Collection.prototype.bindRemove = function(fn, opt_handler) {
+  var func = goog.bind(fn, (opt_handler || this));
+  this.removedModelsFns_.push(func);
+  return goog.getUid(func);
+};
+
+
+/**
  * @inheritDoc
  */
 mvc.Collection.prototype.unbind = function(id) {
@@ -449,4 +516,18 @@ mvc.Collection.prototype.change_ = function() {
     }
     this.anyModelChange_ = false;
   }
+
+  goog.array.forEach(this.removedModelsFns_, function(fn) {
+    goog.array.forEach(this.removedModels_, function(mod) {
+      fn(mod.model, mod.id);
+    });
+  }, this);
+  this.removedModels_ = [];
+
+  goog.array.forEach(this.addedModelsFns_, function(fn) {
+    goog.array.forEach(this.addedModels_, function(mod) {
+      fn(mod);
+    });
+  }, this);
+  this.addedModels_ = [];
 };

@@ -346,6 +346,8 @@ A collection also offers these aditional methods:
 - clear: clears all the models
 - modelChange(function, handler): like bind for model but is bound only on changes to the collections children being sorted or added/removed
 - anyModelChange(function, handler): similar to modelChange but will fire when any model is changed regardless of it it updates sort order
+- bindAdd(function, handler): function takes the added model as an argument and is run whenever a model is added to the collection
+- bindRemove(function, handler): function takes the model and the model's id/cid in case the model is disposed and is run when a model is removed from the collection
 
 ## mvc.Store ##
 
@@ -558,6 +560,7 @@ you can then run the tests by going to:
 - more tests
 - fix behaviour for prev and revert
 - add binding methods and cleanup on mvc.Control
+- add in bindAdd and bindRemove on mvc.Collection & Control
 
 ### v1.0a ###
 
