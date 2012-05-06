@@ -257,7 +257,7 @@ mvc.Control.prototype.bindAll = function(fn, opt_handler) {
  * @param {Object=} opt_handler object for 'this' of function.
  * @return {number} id to use for unbind.
  */
-mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
+mvc.Control.prototype.bindUnload = function(fn, opt_handler) {
   var id = this.getModel().bindUnload(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
