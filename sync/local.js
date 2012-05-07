@@ -6,7 +6,7 @@ goog.provide('mvc.LocalSync');
 
 goog.require('goog.storage.Storage');
 goog.require('goog.storage.mechanism.HTML5LocalStorage');
-
+goog.require('mvc.Sync');
 
 
 /**
