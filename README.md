@@ -146,7 +146,7 @@ model.get('name'); // returns "Brett-Bowen, Rhys"
 
 ### setting and validation ###
 
-You can also change how you set and validate data by using the setter function. you can do any checks on the data in the function and throw and error if it doesn't pass. The errors are handled by the model's error handling function. By default it just ignores the error and the value isn't set, but you can override it by:
+You can also change how you set and validate data by using the setter function. you can do any checks on the data in the function and throw a mvc.Model.ValidateError if it doesn't pass, any other errors are passed up the chain. The validate errors are handled by the model's error handling function. By default it just ignores the error and the value isn't set, but you can override it by:
 
 ```javascript
   var errorFn = function(err) {
@@ -161,7 +161,7 @@ We can then put in a formatting and validating function for our name
 model.setter('firstName', function(name) {
   name = goog.string.trim(name);
   if (!name.length)
-    throw new Error("name can not be blank");
+    throw new mvc.Model.ValidateError("name can not be blank");
   return name;
 })
 ```

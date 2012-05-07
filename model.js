@@ -4,7 +4,7 @@
 //     https://github.com/rhysbrettbowen/goog.mvc
 
 goog.provide('mvc.Model');
-goog.provide('mvc.model.Schema');
+goog.provide('mvc.Model.ValidateError');
 
 goog.require('goog.array');
 goog.require('goog.events');
@@ -178,7 +178,7 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
     };
     return function(value) {
       if (!fns[fn.toLowerCase()](value))
-        throw new Error('value not a ' + fn);
+        throw new mvc.Model.ValidateError('value not a ' + fn);
       return value;
     };
   } else if (val.exec) {
@@ -186,7 +186,7 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
     // convert regex to function
     return goog.bind(function(regex, value, mod) {
       if (goog.isNull(regex.exec(value))) {
-        throw new Error(regex + 'note matched');
+        throw new mvc.Model.ValidateError(regex + 'note matched');
       }
       return value;}, this, fn);
   } else if (goog.isFunction(val) &&
@@ -204,7 +204,7 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
           return val;
         }
       }
-      throw new Error('not of type:\n' + fn);
+      throw new mvc.Model.ValidateError('not of type:\n' + fn);
     };
   }
   return /** @type {Function} */(val);
@@ -364,7 +364,10 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
           this.attr_[key] = val;
         success = true;
       } catch (err) {
-        this.handleErr_(err);
+        if (err.isValidateError)
+          this.handleErr_(err);
+        else
+          throw err;
       }
     }
   }, this);
@@ -710,3 +713,18 @@ mvc.Model.prototype.bindAll = function(fn, opt_handler) {
   return id;
 };
 
+
+/**
+ * Validate Error class.
+ *
+ * @constructor
+ * @param {string=} opt_message for error.
+ * @param {string=} opt_filename for error.
+ * @param {number=} opt_lineno for error.
+ * @extends {Error}
+ */
+mvc.Model.ValidateError = function(opt_message, opt_filename, opt_lineno) {
+  goog.base(this, opt_message || 'validation error', opt_filename, opt_lineno);
+  this.isValidateError = true;
+};
+goog.inherits(mvc.Model.ValidateError, Error);
