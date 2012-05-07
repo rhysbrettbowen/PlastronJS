@@ -314,8 +314,8 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
         goog.array.remove(this.models_, modelObj);
         ret = true;
         goog.array.insert(this.removedModels_, {
-          model: modelObj,
-          id: modelObj.get('id') || modelObj.getCid()
+          model: model,
+          id: model.get('id') || model.getCid()
         });
       }
     }, this);
@@ -338,10 +338,11 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
     model.unbind(modelObj.unload);
     model.unbind(modelObj.change);
     goog.array.insert(this.removedModels_, modelObj);
-    goog.array.remove(this.models_, {
-          model: modelObj,
-          id: modelObj.get('id') || modelObj.getCid()
-        });
+    goog.array.remove(this.models_, modelObj);
+    goog.array.insert(this.removedModels_, {
+      model: model,
+      id: model.get('id') || model.getCid()
+    });
     this.sort(true);
     if (!opt_silent)
       this.dispatchEvent(goog.events.EventType.CHANGE);
