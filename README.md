@@ -50,7 +50,7 @@ goog.require('mvc.Model');
  * @inheritDoc
  */
 var Person = function(firstName, lastName) {
-    goog.base(this, {attr: {
+    goog.base(this, {"attr": {
         'firstName': firstName,
         'lastName': lastName
     }});
