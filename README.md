@@ -320,7 +320,7 @@ var student = function(options){
 goog.inherits(student, mvc.Model);
 var class = new mvc.Collection({
     'modelType': student,
-    'name': 'clodure mvc 101'
+    'name': 'closure mvc 101'
 });
 class.add({'name':'Fred'});
 // class now has a student called fred
