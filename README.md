@@ -322,7 +322,7 @@ var class = new mvc.Collection({
     'modelType': student,
     'name': 'clodure mvc 101'
 });
-class.addModel({'name':'Fred'});
+class.add({'name':'Fred'});
 // class now has a student called fred
 ```
 
