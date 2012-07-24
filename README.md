@@ -50,7 +50,7 @@ goog.require('mvc.Model');
  * @inheritDoc
  */
 var Person = function(firstName, lastName) {
-    goog.base(this, {attr: {
+    goog.base(this, {"attr": {
         'firstName': firstName,
         'lastName': lastName
     }});
@@ -320,9 +320,9 @@ var student = function(options){
 goog.inherits(student, mvc.Model);
 var class = new mvc.Collection({
     'modelType': student,
-    'name': 'clodure mvc 101'
+    'name': 'closure mvc 101'
 });
-class.addModel({'name':'Fred'});
+class.add({'name':'Fred'});
 // class now has a student called fred
 ```
 
