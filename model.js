@@ -196,6 +196,8 @@ mvc.Model.prototype.parseSchemaFn_ = function(fn) {
 
     // convert constructor function to check type
     val = function(val) {
+      if(!goog.isObject(val))
+        throw new mvc.Model.ValidateError('not of type:\n' + fn);
       var currClass = Object.getPrototypeOf(val).constructor;
       if (Object.getPrototypeOf(val).constructor == fn) {
         return val;

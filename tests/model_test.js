@@ -1,5 +1,6 @@
 goog.require('goog.testing.jsunit');
 goog.require('mvc.Model');
+goog.require('mvc.Model.ValidateError');
 
 
 
@@ -85,10 +86,13 @@ var testSetter = function() {
 var testValidate = function() {
   var b = false;
   simpleModel.set('a', 1);
-  simpleModel.errorHandler(function() {b = true;});
+  var handleErr = function() {
+    b = true;
+  }
+  simpleModel.errorHandler(handleErr);
   simpleModel.setter('a', function(a) {
     if (a % 2 === 0)
-      throw new Error('must be odd number');
+      throw new mvc.Model.ValidateError('must be odd number');
     return a;
   });
   simpleModel.set('a', 2);
@@ -157,7 +161,7 @@ var testSchemaFunctionParsing = function() {
   C.prototype.a = 1;
   var parse = mvc.Model.prototype.parseSchemaFn_;
   var parseFn = parse(function(a) {
-    if (a % 2 != 0) throw new Error('odd');
+    if (a % 2 != 0) throw new mvc.model.ValidateError('odd');
     return a;
   });
   var parseNum = parse('Number');
@@ -209,9 +213,9 @@ var testPrev = function() {
 
 var testIsNew = function() {
   var a = mvc.Model.create({'a': 1});
-  assertFalse(a.isNew());
-  a.set('id', 'abc');
   assert(a.isNew());
+  a.set('id', 'abc');
+  assertFalse(a.isNew());
 };
 
 var testSetSchema = function() {
