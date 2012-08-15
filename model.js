@@ -591,6 +591,8 @@ mvc.Model.prototype.fetch = function(opt_callback) {
 
 /**
  * pushes the object to the sync
+ *
+ * @param {Function=} opt_callback optional callback for sync.
  */
 mvc.Model.prototype.save = function(opt_callback) {
   if (this.sync_)
