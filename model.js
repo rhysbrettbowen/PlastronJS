@@ -592,12 +592,12 @@ mvc.Model.prototype.fetch = function(opt_callback) {
 /**
  * pushes the object to the sync
  */
-mvc.Model.prototype.save = function() {
+mvc.Model.prototype.save = function(opt_callback) {
   if (this.sync_)
     if (this.isNew())
-      this.sync_.create(this);
+      this.sync_.create(this, opt_callback);
     else
-      this.sync_.update(this);
+      this.sync_.update(this, opt_callback);
 };
 
 
