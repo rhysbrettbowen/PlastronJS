@@ -238,6 +238,23 @@ mvc.Model.prototype.toJson = function() {
 
 
 /**
+ * Returns a full copy of the attributes of the model, retrieved using their
+ * respective getters & formatters.
+ *
+ * @return {!Object} The model attrs as a js object.
+ */
+mvc.Model.prototype.toJsObject = function() {
+  var obj = {};
+  var attrKeys = goog.object.getKeys(this.attr_);
+  var schemaKeys = goog.object.getKeys(this.schema_);
+  goog.array.forEach(goog.array.concat(attrKeys, schemaKeys), function(key) {
+    obj[key] = this.get(key);
+  }, this);
+  return obj;
+};
+
+
+/**
  * sets the sync for the model
  *
  * @param {mvc.Sync} sync to set the sync for the object.

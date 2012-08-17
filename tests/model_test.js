@@ -197,6 +197,32 @@ var testToJson = function() {
   assertEquals(1, a.toJson()['a']);
 };
 
+var testToJsObject = function() {
+  var a = mvc.Model.create({
+    'foo': 'bar',
+    'price': 99,
+    'date': new Date(1999, 11, 31),
+    'schema': {
+      'price': {
+        get: function(price) {return price + 10},
+        require: ['price']
+      }
+    }
+  });
+  a.format('date', function(date) {
+    return (date.getMonth() + 1) + '/' + date.getDate();
+  });
+  a.meta('priceFriendly', ['price'], function(price) {
+    return '$' + price;
+  })
+  var obj = a.toJsObject();
+  assertEquals('bar', obj['foo']);
+  assertEquals(109, obj['price']);
+  assertEquals('$109', obj['priceFriendly']);
+  assertEquals('12/31', obj['date']);
+  assertNotThrows(emptyModel.toJsObject);
+};
+
 var testReset = function() {
   var a = mvc.Model.create({'a': 1});
   a.reset(true);
