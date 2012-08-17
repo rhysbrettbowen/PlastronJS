@@ -558,7 +558,7 @@ mvc.Model.prototype.revert = function(opt_silent) {
 
 /**
  * @param {boolean=} opt_sync pass true to del the sync to delete the model.
- * @param {function=} opt_callback function to call after sync delete finishes
+ * @param {Function=} opt_callback function to call after sync delete finishes
  */
 mvc.Model.prototype.dispose = function(opt_sync, opt_callback) {
   if (opt_sync)
