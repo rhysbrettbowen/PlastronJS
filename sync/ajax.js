@@ -124,7 +124,7 @@ mvc.AjaxSync.prototype.del = function(model, opt_callback) {
 mvc.AjaxSync.prototype.onCreateComplete_ = function(model, callback, e) {
   var xhr = e.target;
   model.set('id', xhr.getResponseJson()['result']['id']);
-	callback();
+  callback.call(model);
 };
 
 
@@ -140,7 +140,7 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
   var xhr = e.target;
   var json = xhr.getResponseJson()['result'];
   model.set(json);
-	callback();
+  callback.call(model);
 };
 
 
@@ -153,7 +153,7 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
  * @param {Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
-	callback();
+  callback.call(model);
 };
 
 
@@ -166,5 +166,5 @@ mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
  * @param {Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onDelComplete_ = function(model, callback, e) {
-	callback();
+  callback.call(model);
 };
