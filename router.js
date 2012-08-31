@@ -56,7 +56,9 @@ mvc.Router.prototype.route = function(route, fn) {
             .replace(/\\:\w+/g, '(\\w+)')
             .replace(/\\\*/g, '(.*)')
             .replace(/\\\[/g, '(')
-            .replace(/\\\]/g, ')?') + '$');
+            .replace(/\\\]/g, ')?')
+            .replace(/\\\{/g, '(?:')
+            .replace(/\\\}/g, ')?') + '$');
   this.routes_.push({route: route, callback: fn});
 };
 
