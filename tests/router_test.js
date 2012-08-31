@@ -29,6 +29,26 @@ var testRoute = function() {
   router.navigate('test');
 };
 
+var testRouteCapturingGroup = function() {
+    router.route('/note=:id[/edit][?*]', function (fragment, id, edit, query, queryVals) {
+        assertEquals('/note=1234567890/edit?abc=123', fragment);
+        assertEquals('1234567890', id);
+        assertEquals('/edit', edit);
+        assertEquals('?abc=123', query);
+        assertEquals('abc=123', queryVals);
+    });
+    router.navigate('/note=1234567890/edit?abc=123');
+};
+
+var testRouteNonCapturingGroup = function() {
+    router.route('/note=:id{/:operation}{?abc=:abc}', function (fragment, id, operation, abc) {
+        assertEquals('/note=1234567890/edit?abc=123', fragment);
+        assertEquals('1234567890', id);
+        assertEquals('edit', operation);
+        assertEquals('123', abc);
+    });
+    router.navigate('/note=1234567890/edit?abc=123');
+};
 
 testCase = new goog.testing.ContinuationTestCase();
 testCase.autoDiscoverTests();
