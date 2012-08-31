@@ -515,7 +515,7 @@ so for /note=1234567890/edit/message?abc=123 will give:
 
 ```javascript
 function(fragment,id,edit,entity,query,queryVals) {
-    console.log(fragment); // /note=1234567890/edit?abc=123
+    console.log(fragment); // /note=1234567890/edit/message?abc=123
     console.log(id); // 1234567890
     console.log(edit); // /edit
     console.log(entity); // message
