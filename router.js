@@ -48,7 +48,7 @@ mvc.Router.prototype.navigate = function(fragment) {
  * argument. *abc/def will pass through all after the * as an argument
  *
  * @param {string|RegExp} route to watch for.
- * @param {Function} fn should take in the token and any captured strings.
+ * @param {function(string, ...[string])} fn should take in the token and any captured strings.
  */
 mvc.Router.prototype.route = function(route, fn) {
   if (goog.isString(route))
@@ -56,7 +56,9 @@ mvc.Router.prototype.route = function(route, fn) {
             .replace(/\\:\w+/g, '(\\w+)')
             .replace(/\\\*/g, '(.*)')
             .replace(/\\\[/g, '(')
-            .replace(/\\\]/g, ')?') + '$');
+            .replace(/\\\]/g, ')?')
+            .replace(/\\\{/g, '(?:')
+            .replace(/\\\}/g, ')?') + '$');
   this.routes_.push({route: route, callback: fn});
 };
 

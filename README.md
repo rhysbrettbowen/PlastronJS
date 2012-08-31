@@ -501,22 +501,24 @@ The AjaxSync can be used and passed an object of functions or strings (with the 
 
 ## mvc.Router ##
 
-mvc.Router uses goog.History and hash tokens to hold and manage the state of the application. You can define a route with a regular expression that will fire custom events when a certain route comes on the URL. A route can be defined with a route expression which can take : followed by an attribute, a * to pass the rest of the route and [] for an optional part of the url (which will be passed to the function). For instance:
+mvc.Router uses goog.History and hash tokens to hold and manage the state of the application. You can define a route with a regular expression that will fire custom events when a certain route comes on the URL. A route can be defined with a route expression which can take : followed by an attribute, a * to pass the rest of the route, [] for an optional part of the url (which will be passed to the function) and {} for an optional part that will be not passed to the function. For instance:
 
 ```javascript
-route = "/note=:id[/edit][?*]";
+route = "/note=:id[/edit]{/:entity}[?*]";
 ```
-should take a function with four attribute:
+should take a function with six attribute:
 ```javascript
-function(id,edit,query,queryVals)
+function(fragment,id,edit,entity,query,queryVals)
 ```
 
-so for /note=1234567890/edit?abc=123 will give:
+so for /note=1234567890/edit/message?abc=123 will give:
 
 ```javascript
-function(id,edit,query,queryVals) {
+function(fragment,id,edit,entity,query,queryVals) {
+    console.log(fragment); // /note=1234567890/edit/message?abc=123
     console.log(id); // 1234567890
     console.log(edit); // /edit
+    console.log(entity); // message
     console.log(query); // ?abc=123
     console.log(queryVals); // abc=123
 }
