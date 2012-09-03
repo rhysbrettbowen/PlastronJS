@@ -50,6 +50,41 @@ var testRouteNonCapturingGroup = function() {
     router.navigate('/note=1234567890/edit?abc=123');
 };
 
+var testRouteOptionalScope = function() {
+    var reached = false;
+    var context = {
+        f: function () {
+            reached = true;
+        }
+    };
+    router.route('/test', function (fragment) {
+        this.f();
+    }, context);
+
+    waitForEvent(router.history_, goog.history.EventType.NAVIGATE,
+        function() {
+            assertTrue(reached);
+        });
+    router.navigate('/test');
+};
+
+var testRouteGlobalScope = function() {
+    var reached = false;
+    goog.global.globalF = function () {
+            reached = true;
+    };
+    router.route('/test', function (fragment) {
+        this.globalF();
+    });
+
+    waitForEvent(router.history_, goog.history.EventType.NAVIGATE,
+        function() {
+            assertTrue(reached);
+        });
+
+    router.navigate('/test');
+};
+
 testCase = new goog.testing.ContinuationTestCase();
 testCase.autoDiscoverTests();
 G_testRunner.initialize(testCase);
