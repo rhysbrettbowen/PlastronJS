@@ -49,8 +49,10 @@ mvc.Router.prototype.navigate = function(fragment) {
  *
  * @param {string|RegExp} route to watch for.
  * @param {function(string, ...[string])} fn should take in the token and any captured strings.
+ * @param {Object=} opt_context Object in whose context the function is to be
+ *     called (the global scope if none).
  */
-mvc.Router.prototype.route = function(route, fn) {
+mvc.Router.prototype.route = function(route, fn, opt_context) {
   if (goog.isString(route))
     route = new RegExp('^' + goog.string.regExpEscape(route)
             .replace(/\\:\w+/g, '(\\w+)')
@@ -59,7 +61,7 @@ mvc.Router.prototype.route = function(route, fn) {
             .replace(/\\\]/g, ')?')
             .replace(/\\\{/g, '(?:')
             .replace(/\\\}/g, ')?') + '$');
-  this.routes_.push({route: route, callback: fn});
+  this.routes_.push({route: route, callback: fn, context: opt_context});
 };
 
 
@@ -72,6 +74,6 @@ mvc.Router.prototype.onChange_ = function() {
     var args = route.route.exec(fragment);
     if (!args)
       return;
-    route.callback.apply(this, args);
+    route.callback.apply(route.context, args);
   }, this);
 };
