@@ -19,11 +19,19 @@ goog.require('goog.history.Html5History');
  * HTML5 history.
  * @param {string=} opt_blankPage url to a blank page - needed if HTML5 is not
  * available and you don't want to show the fragment.
+ * @param {HTMLInputElement=} opt_input The hidden input element to be used to
+ * store the history token.  If not provided, a hidden input element will
+ * be created using document.write.
+ * @param {HTMLIFrameElement=} opt_iframe The hidden iframe that will be used by
+ * IE for pushing history state changes, or by all browsers if opt_noFragment
+ * is true. If not provided, a hidden iframe element will be created using
+ * document.write.
  */
-mvc.Router = function(opt_noFragment, opt_blankPage) {
+mvc.Router = function(opt_noFragment, opt_blankPage, opt_input, opt_iframe) {
   this.history_ = goog.history.Html5History.isSupported() ?
       new goog.history.Html5History() :
-      new goog.History(!!(opt_blankPage && opt_noFragment), opt_blankPage);
+      new goog.History(!!(opt_blankPage && opt_noFragment), opt_blankPage,
+        opt_input, opt_iframe);
   if (this.history_.setUseFragment)
     this.history_.setUseFragment(!opt_noFragment);
   goog.events.listen(this.history_, goog.history.EventType.NAVIGATE,
