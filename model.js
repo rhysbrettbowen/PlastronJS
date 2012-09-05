@@ -558,10 +558,11 @@ mvc.Model.prototype.revert = function(opt_silent) {
 
 /**
  * @param {boolean=} opt_sync pass true to del the sync to delete the model.
+ * @param {Function=} opt_callback function to call after sync delete finishes
  */
-mvc.Model.prototype.dispose = function(opt_sync) {
+mvc.Model.prototype.dispose = function(opt_sync, opt_callback) {
   if (opt_sync)
-    this.sync_.del(this);
+    this.sync_.del(this, opt_callback);
   this.dispatchEvent(goog.events.EventType.UNLOAD);
   goog.array.forEach(goog.array.clone(this.onUnload_), function(fn) {
     fn(this);
