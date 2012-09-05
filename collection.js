@@ -279,10 +279,13 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
  *
  * @param {Object=} opt_options to pass to the model constructor.
  * @param {boolean=} opt_silent to supress change event.
+ * @param {function(new:mvc.Model, Object=)=} opt_modelType constructor for
+ * the new model.
  * @return {mvc.Model} the newly created model.
  */
-mvc.Collection.prototype.newModel = function(opt_options, opt_silent) {
-  var model = new this.modelType_(opt_options);
+mvc.Collection.prototype.newModel = function(
+    opt_options, opt_silent, opt_modelType) {
+  var model = new (opt_modelType || this.modelType_)(opt_options);
   this.add(model, 0, opt_silent);
   return model;
 };
@@ -395,6 +398,17 @@ mvc.Collection.prototype.at = function(index) {
   } catch (err) {
     return null;
   }
+};
+
+
+/**
+ * return the index of a given model
+ *
+ * @param {mvc.Model} model to find.
+ * @return {number} index of model.
+ */
+mvc.Collection.prototype.indexOf = function(model) {
+  return goog.array.indexOf(this.getModels(), model);
 };
 
 
