@@ -36,10 +36,10 @@ mvc.Router = function(opt_noFragment, opt_blankPage, opt_input, opt_iframe) {
     this.history_.setUseFragment(!opt_noFragment);
   goog.events.listen(this.history_, goog.history.EventType.NAVIGATE,
       this.onChange_, false, this);
-  this.history_.setEnabled(true);
   this.routes_ = [];
+  this.currentFragment_ = "";
+  this.history_.setEnabled(true);
 };
-
 
 /**
  * pass through the fragment for the URL
@@ -69,19 +69,36 @@ mvc.Router.prototype.route = function(route, fn, opt_context) {
             .replace(/\\\]/g, ')?')
             .replace(/\\\{/g, '(?:')
             .replace(/\\\}/g, ')?') + '$');
-  this.routes_.push({route: route, callback: fn, context: opt_context});
+  var completeRoute = {
+    route: route, 
+    callback: fn, 
+    context: opt_context
+  };
+  this.runRouteIfMatches_(completeRoute, this.currentFragment_);
+  this.routes_.push(completeRoute);
 };
 
+/**
+ * run route callback if route regexp matches fragment
+ * @param {Object} route Route object with context and route regexp.
+ * @param {String} fragment URI fragment to match with.
+ */
+mvc.Router.prototype.runRouteIfMatches_ = function(route, fragment) {
+  var args = route.route.exec(fragment);
+  if (args) {
+    route.callback.apply(route.context, args);
+  }
+}
 
 /**
  * @private
  */
 mvc.Router.prototype.onChange_ = function() {
   var fragment = this.history_.getToken();
-  goog.array.forEach(this.routes_ || [], function(route) {
-    var args = route.route.exec(fragment);
-    if (!args)
-      return;
-    route.callback.apply(route.context, args);
-  }, this);
+  if (fragment != this.currentFragment_) {
+    goog.array.forEach(this.routes_ || [], function(route) {
+      this.runRouteIfMatches_(route, fragment);
+    }, this);
+    this.currentFragment_ = fragment;
+  }
 };
