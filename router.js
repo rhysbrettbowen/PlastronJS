@@ -61,6 +61,14 @@ mvc.Router.prototype.navigate = function(fragment) {
   this.history_.setToken(fragment);
 };
 
+/**
+ * returns current routed fragment
+ * @return {string} routed fragment.
+ */
+mvc.Router.prototype.getFragment = function() {
+  return this.currentFragment_;
+}
+
 
 /**
  * define route as string or regex. /:abc/ will pass "abc" through as an
