@@ -40,6 +40,17 @@ mvc.Router = function(opt_noFragment, opt_blankPage, opt_input, opt_iframe) {
   this.currentFragment_ = "";
   this.history_.setEnabled(true);
 };
+goog.inherits(mvc.Router, goog.events.EventTarget);
+
+/**
+ * router event types
+ */
+mvc.Router.EventType = {
+  /*
+   * event to trigger when route is about to change.
+   */
+  ROUTE_EXPIRED: "routeExpired"
+}
 
 /**
  * pass through the fragment for the URL
@@ -96,6 +107,7 @@ mvc.Router.prototype.runRouteIfMatches_ = function(route, fragment) {
 mvc.Router.prototype.onChange_ = function() {
   var fragment = this.history_.getToken();
   if (fragment != this.currentFragment_) {
+    this.dispatchEvent({type: mvc.Router.EventType.ROUTE_EXPIRED, path: fragment});
     goog.array.forEach(this.routes_ || [], function(route) {
       this.runRouteIfMatches_(route, fragment);
     }, this);
