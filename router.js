@@ -115,7 +115,11 @@ mvc.Router.prototype.runRouteIfMatches_ = function(route, fragment) {
 mvc.Router.prototype.onChange_ = function() {
   var fragment = this.history_.getToken();
   if (fragment != this.currentFragment_) {
-    this.dispatchEvent({type: mvc.Router.EventType.ROUTE_EXPIRED, path: fragment});
+    this.dispatchEvent({
+        type: mvc.Router.EventType.ROUTE_EXPIRED, 
+        previous: this.currentFragment_,
+        current: fragment
+    });
     goog.array.forEach(this.routes_ || [], function(route) {
       this.runRouteIfMatches_(route, fragment);
     }, this);
