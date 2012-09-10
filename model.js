@@ -736,7 +736,7 @@ mvc.Model.prototype.bindAll = function(fn, opt_handler) {
   var bound = goog.bind(fn, (opt_handler || this));
   var id = goog.getUid(bound);
   goog.object.set(this.boundAll_, '' + id, bound);
-  var fn = goog.bind(fn, opt_handler || this, this);
+  fn = goog.bind(fn, opt_handler || this, this);
   var ret = {
     fire: function() {
       fn();
