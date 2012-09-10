@@ -85,6 +85,52 @@ var testRouteGlobalScope = function() {
     router.navigate('/test');
 };
 
+var testRouteExpiredEventTrigger = function() {
+    var eventTriggered = false,
+        startRoute = '/test_start';
+
+    router.navigate(startRoute);
+    var listener = goog.events.listenOnce(router, mvc.Router.EventType.ROUTE_EXPIRED, 
+        function(event) {
+            assertEquals(event.type, mvc.Router.EventType.ROUTE_EXPIRED);
+           assertEquals(event.previous, startRoute);
+           assertEquals(event.current, endRoute);
+            eventTriggered = true;     
+        }, false);
+
+    var endRoute = '/test_complete';
+    router.navigate(endRoute);
+    assertTrue(eventTriggered);
+};
+
+var testAddressParsedAfterAdding = function() {
+    var startRoute = '/testForParse',
+        routed = false;
+
+    router.navigate(startRoute);
+    router.route(startRoute, function() {
+        routed = true;
+    });
+
+    assertTrue(routed);
+};
+
+/**
+ * Google chrome runs both 'popstart' and 'hashchange' events, that cause route to run twice.
+ */
+var testRouteExecutedOnceOnly = function() {
+    var executeRoute = 'routeToExecute',
+        executionTimes = 0;
+
+    router.route(executeRoute, function() {
+        executionTimes++;
+    });
+
+    router.navigate(executeRoute);
+   assertEquals(executionTimes, 1);
+}
+
+
 testCase = new goog.testing.ContinuationTestCase();
 testCase.autoDiscoverTests();
 G_testRunner.initialize(testCase);
