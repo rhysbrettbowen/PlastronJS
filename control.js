@@ -93,9 +93,9 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire. if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.on = function(
     eventName, fn, opt_className, opt_handler, opt_priority) {
@@ -139,7 +139,18 @@ mvc.Control.prototype.on = function(
             return obj.priority <= (opt_priority || 50);
       }
       ) + 1);
-  return obj.uid;
+  var ret = {
+    fire: goog.bind(function(opt_target) {
+      var target = this.getElement();
+      if(opt_target)
+        target = opt_target;
+      fn.call(opt_handler || this, new goog.events.Event(eventName, target));
+      return ret;
+    }, this),
+    id: obj.uid,
+    off: goog.bind(this.off, this, obj.uid)
+  };
+  return ret;
 };
 
 
@@ -151,9 +162,9 @@ mvc.Control.prototype.on = function(
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire.if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.once = function(
     eventName, fn, opt_className, opt_handler, opt_priority) {
@@ -161,7 +172,7 @@ mvc.Control.prototype.once = function(
   var onceFn = function() {
     fn.apply(/** @type {Object} */(opt_handler || this),
         Array.prototype.slice.call(arguments));
-    this.off(uid);
+    uid.off();
   };
   uid = this.on(eventName, onceFn, opt_className);
   return uid;
@@ -175,9 +186,9 @@ mvc.Control.prototype.once = function(
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire. if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.click = function(
     fn, opt_className, opt_handler, opt_priority) {
@@ -189,9 +200,11 @@ mvc.Control.prototype.click = function(
 /**
  * take off a lister by it's id
  *
- * @param {string} uid of event listener to turn off.
+ * @param {Object|string} uid of event listener to turn off.
  */
 mvc.Control.prototype.off = function(uid) {
+  if(goog.isObject(uid) && uid.id)
+    uid = uid.id;
   goog.object.forEach(this.eventHolder_.handlers, function(val, key) {
     goog.array.removeIf(val, function(handler) {
       return handler.uid == uid;
@@ -231,11 +244,12 @@ mvc.Control.prototype.getEls = function(selector) {
  *
  * @param {Array|string} name of attributes to listen to.
  * @param {Function} fn function to run when change.
- * @param {*=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bind = function(name, fn, opt_handler) {
-  var id = this.getModel().bind(name, fn, opt_handler || this);
+  var model = this.getModel();
+  var id = model.bind(name, fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -246,10 +260,11 @@ mvc.Control.prototype.bind = function(name, fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindAll = function(fn, opt_handler) {
-  var id = this.getModel().bindAll(fn, opt_handler || this);
+  var model = this.getModel();
+  var id = model.bindAll(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -260,10 +275,11 @@ mvc.Control.prototype.bindAll = function(fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindAdd = function(fn, opt_handler) {
-  var id = this.getModel().bindAdd(fn, opt_handler || this);
+  var model = this.getModel();
+  var id = model.bindAdd(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -274,10 +290,11 @@ mvc.Control.prototype.bindAdd = function(fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindRemove = function(fn, opt_handler) {
-  var id = this.getModel().bindRemove(fn, opt_handler || this);
+  var model = this.getModel();
+  var id = model.bindRemove(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -286,10 +303,11 @@ mvc.Control.prototype.bindRemove = function(fn, opt_handler) {
 /**
  * @param {Function} fn function to run when model is disposed.
  * @param {Object=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindUnload = function(fn, opt_handler) {
-  var id = this.getModel().bindUnload(fn, opt_handler || this);
+  var model = this.getModel();
+  var id = model.bindUnload(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
 };
@@ -300,9 +318,10 @@ mvc.Control.prototype.bindUnload = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
+  var model = this.getModel();
   var id = this.getModel().anyModelChange(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
@@ -314,9 +333,10 @@ mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.modelChange = function(fn, opt_handler) {
+  var model = this.getModel();
   var id = this.getModel().modelChange(fn, opt_handler || this);
   this.modelListeners_.push(id);
   return id;
@@ -326,11 +346,11 @@ mvc.Control.prototype.modelChange = function(fn, opt_handler) {
 /**
  * unbind a listener by id
  *
- * @param {number} id returned form bind or bindall.
+ * @param {number|Object} id returned form bind or bindall.
  * @return {boolean} if found and removed.
  */
 mvc.Control.prototype.unbind = function(id) {
-  return this.getModel().unbind(id);
+  return this.getModel().unbind(goog.isObject(id) ? id.id : id);
 };
 
 /**
@@ -338,7 +358,7 @@ mvc.Control.prototype.unbind = function(id) {
  */
 mvc.Control.prototype.disposeInternal = function() {
   goog.array.forEach(this.modelListeners_, function(id) {
-    this.unbind(id);
+    id.unbind();
   }, this);
   this.eventHolder_ = null;
   goog.base(this, 'disposeInternal');

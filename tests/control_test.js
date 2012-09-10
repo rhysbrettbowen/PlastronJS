@@ -82,3 +82,42 @@ var testPriority = function() {
   assertEquals(3, c);
   assertEquals(4, d);
 };
+
+var testListenerFire = function() {
+  var el;
+  var fn = function(e) {
+    el = e.target;
+  };
+  simpleControl.on('click', fn).fire();
+  assertEquals(el, simpleControl.getElement());
+};
+
+var testListenerFireTarget = function() {
+  var el;
+  var target = document.createElement('DIV');
+  var fn = function(e) {
+    el = e.target;
+  };
+  simpleControl.on('click', fn).fire(target);
+  assertEquals(el, target);
+};
+
+var testListenerOff = function() {
+  var run = false;
+  var fn = function(e) {
+    run = true;
+  };
+  var bound = simpleControl.on('click', fn);
+  var evt = document.createEvent('MouseEvents');
+  evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false,
+      false, false, 0, null);
+  simpleControl.getElement().dispatchEvent(evt);
+  assert('true, click should be handled', run);
+  bound.off();
+  evt = document.createEvent('MouseEvents');
+  evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false,
+      false, false, 0, null);
+  simpleControl.getElement().dispatchEvent(evt);
+  assert('true, click listener should be removed', run);
+};
+

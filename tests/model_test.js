@@ -363,6 +363,45 @@ var testBind = function() {
   assert(ran);
 };
 
+var testBindLive = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var testA;
+  var that;
+  var bindFn = function(a) {
+    ran++;
+    testA = a;
+    that = this;
+  };
+  a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+  assertEquals(that, this);
+  a.set('a', 2);
+  assertEquals(ran, 2);
+  assertEquals(testA, 2);
+};
+
+var testBindUnbind = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var testA;
+  var that;
+  var bindFn = function(a) {
+    ran++;
+    testA = a;
+    that = this;
+  };
+  var bound = a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+  assertEquals(that, this);
+  bound.unbind();
+  a.set('a', 2);
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+};
+
 var testBindSchema = function() {
   var a = mvc.Model.create({'a': 1});
   var ran = false;
@@ -416,6 +455,38 @@ var testBindAll = function() {
   assertEquals(this, that);
 };
 
+var testBindAllLive = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var that;
+  var bindFn = function() {
+    ran++;
+    that = this;
+  };
+  a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(that, this);
+  a.set('a', 2);
+  assertEquals(ran, 2);
+};
+
+var testBindAllUnbind = function() {
+  var a = mvc.Model.create({'a': 0});
+  var ran = 0;
+  var that;
+  var bindFn = function() {
+    ran++;
+    that = this;
+  };
+  var bound = a.bind('a', bindFn, this);
+  a.set('a', 1);
+  assertEquals(ran, 1);
+  assertEquals(that, this);
+  bound.unbind();
+  a.set('a', 2);
+  assertEquals(ran, 1);
+};
+
 var testUnbindAll = function() {
   //test bound first
   var a = mvc.Model.create({'a': 1});
@@ -452,6 +523,38 @@ var testBindUnload = function() {
   assert(ran);
   //test that handler works
   assertEquals(this, that);
+};
+
+var testBindUnloadLive = function() {
+  //test bound first
+  var a = mvc.Model.create({'a': 1});
+  var ran = false;
+  var that;
+  var bindFn = function() {
+    ran = !ran;
+    that = this;
+  };
+  var cancel = a.bindUnload(bindFn, this).fire();
+  // test it ran
+  assert(ran);
+  //test that handler works
+  assertEquals(this, that);
+};
+
+var testBindUnloadUnbind = function() {
+  //test bound first
+  var a = mvc.Model.create({'a': 1});
+  var ran = false;
+  var that;
+  var bindFn = function() {
+    ran = !ran;
+    that = this;
+  };
+  var cancel = a.bindUnload(bindFn, this).unbind;
+  // test it ran
+  assert(!ran);
+  //test that handler works
+  assertNotEquals(this, that);
 };
 
 var testUnbindUnload = function() {

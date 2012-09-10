@@ -14,6 +14,7 @@ goog.require('goog.history.Html5History');
 
 /**
  * @constructor
+ * @extends {goog.events.EventTarget}
  *
  * @param {boolean=} opt_noFragment set to true to hide fragment when using
  * HTML5 history.
@@ -100,7 +101,7 @@ mvc.Router.prototype.route = function(route, fn, opt_context) {
 /**
  * run route callback if route regexp matches fragment
  * @param {Object} route Route object with context and route regexp.
- * @param {String} fragment URI fragment to match with.
+ * @param {string} fragment URI fragment to match with.
  */
 mvc.Router.prototype.runRouteIfMatches_ = function(route, fragment) {
   var args = route.route.exec(fragment);

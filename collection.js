@@ -201,75 +201,42 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
     opt_ind = this.models_.length + opt_ind;
   }
   var insert = false;
-
+  if(!goog.isArray(model))
+    model = [model];
   // if array then reverse and then run each model through this function
-  if (goog.isArray(model)) {
-    insert = goog.array.forEach(model.reverse(), function(mod) {
-      if (!goog.array.find(this.models_, function(mod) {
-        return mod.model == model;
-      })) {
+  goog.array.forEach(model.reverse(), function(mod) {
+    if (!goog.array.find(this.models_, function(mod) {
+      return mod.model == model;
+    })) {
 
-        // insert model and setup listeners for changes
-        insert = true;
-        this.modelChange_ = true;
-        this.anyModelChange_ = true;
-        var changeId = model.bindAll(goog.bind(function() {
-          this.anyModelChange_ = true;
-          this.sort();
-        }, this));
-        var unloadId = model.bindUnload(function(e) {
-          this.remove(model);
-        }, this);
-
-        goog.array.insertAt(this.models_, {
-          model: model,
-          unload: unloadId,
-          change: changeId
-        }, (opt_ind || this.models_.length));
-        goog.array.insert(this.addedModels_, model);
-
-      }
-    }, this);
-    this.length = this.models_.length;
-    this.sort(true);
-    if (insert && !opt_silent)
-      this.change();
-    return insert;
-  }
-
-
-
-  // if model is not in the list
-  if (!goog.array.find(this.models_, function(mod) {
-    return mod.model == model;
-  })) {
-
-    // insert model and setup listeners for changes
-    insert = true;
-    this.modelChange_ = true;
-    this.anyModelChange_ = true;
-    var changeId = model.bindAll(goog.bind(function() {
+      // insert model and setup listeners for changes
+      insert = true;
+      this.modelChange_ = true;
       this.anyModelChange_ = true;
-      this.sort();
-    }, this, false));
-    var unloadId = model.bindUnload(function(e) {
-      this.remove(model);
-    }, this);
+      var changeId = mod.bindAll(goog.bind(function() {
+        this.anyModelChange_ = true;
+        this.sort();
+      }, this));
+      var unloadId = mod.bindUnload(function(e) {
+        this.remove(model);
+      }, this);
 
-    goog.array.insertAt(this.models_, {
-      model: model,
-      unload: unloadId,
-      change: changeId
-    }, (opt_ind || this.models_.length));
-    goog.array.insert(this.addedModels_, model);
+      goog.array.insertAt(this.models_, {
+        model: mod,
+        unload: unloadId,
+        change: changeId
+      }, (opt_ind || this.models_.length));
+      goog.array.insert(this.addedModels_, mod);
 
-    // sort list
-    this.sort(true);
-    if (!opt_silent)
-      this.change();
-  }
+    }
+  }, this);
+
   this.length = this.models_.length;
+  this.sort(true);
+  if (insert && !opt_silent)
+    this.change();
   return insert;
+
 };
 
 
@@ -301,57 +268,58 @@ mvc.Collection.prototype.newModel = function(
 mvc.Collection.prototype.remove = function(model, opt_silent) {
 
   // if it's an array then run each one through the function
-  if (goog.isArray(model)) {
-    var ret = false;
-    goog.array.forEach(model, function(model) {
-      var modelObj = goog.array.find(this.models_, function(mod) {
-        return mod.model == model;
-      });
-      if (modelObj) {
-
-        // remove listeners and remove model
-        this.modelChange_ = true;
-        this.anyModelChange_ = true;
-        model.unbind(modelObj.unload);
-        model.unbind(modelObj.change);
-        goog.array.remove(this.models_, modelObj);
-        ret = true;
-        goog.array.insert(this.removedModels_, {
-          model: model,
-          id: model.get('id') || model.getCid()
-        });
-      }
-    }, this);
-    this.length = this.models_.length;
-    this.sort(true);
-    if (ret && !opt_silent)
-      this.change();
-    return ret;
-  }
-
-  // if the model is in the collection
-  var modelObj = goog.array.find(this.models_, function(mod) {
-    return mod.model == model;
-  });
-  if (modelObj) {
-
-    // remove listeners and remove model
-    this.modelChange_ = true;
-    this.anyModelChange_ = true;
-    model.unbind(modelObj.unload);
-    model.unbind(modelObj.change);
-    goog.array.insert(this.removedModels_, modelObj);
-    goog.array.remove(this.models_, modelObj);
-    goog.array.insert(this.removedModels_, {
-      model: model,
-      id: model.get('id') || model.getCid()
+  if (!goog.isArray(model))
+    model = [model];
+  var ret = false;
+  goog.array.forEach(model, function(model) {
+    var modelObj = goog.array.find(this.models_, function(mod) {
+      return mod.model == model;
     });
-    this.sort(true);
-    if (!opt_silent)
-      this.dispatchEvent(goog.events.EventType.CHANGE);
-  }
+    if (modelObj) {
+
+      // remove listeners and remove model
+      this.modelChange_ = true;
+      this.anyModelChange_ = true;
+      model.unbind(modelObj.unload);
+      model.unbind(modelObj.change);
+      goog.array.remove(this.models_, modelObj);
+      ret = true;
+      goog.array.insert(this.removedModels_, {
+        model: model,
+        id: model.get('id') || model.getCid()
+      });
+    }
+  }, this);
   this.length = this.models_.length;
-  return !!modelObj;
+  if (ret)
+    this.sort(true);
+  if (ret && !opt_silent)
+    this.change();
+  return ret;
+
+  // // if the model is in the collection
+  // var modelObj = goog.array.find(this.models_, function(mod) {
+  //   return mod.model == model;
+  // });
+  // if (modelObj) {
+
+  //   // remove listeners and remove model
+  //   this.modelChange_ = true;
+  //   this.anyModelChange_ = true;
+  //   model.unbind(modelObj.unload);
+  //   model.unbind(modelObj.change);
+  //   goog.array.insert(this.removedModels_, modelObj);
+  //   goog.array.remove(this.models_, modelObj);
+  //   goog.array.insert(this.removedModels_, {
+  //     model: model,
+  //     id: model.get('id') || model.getCid()
+  //   });
+  //   this.sort(true);
+  //   if (!opt_silent)
+  //     this.dispatchEvent(goog.events.EventType.CHANGE);
+  // }
+  // this.length = this.models_.length;
+  // return !!modelObj;
 };
 
 
@@ -431,12 +399,22 @@ mvc.Collection.prototype.clear = function(opt_silent) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bound object.
  */
 mvc.Collection.prototype.modelChange = function(fn, opt_handler) {
   var func = goog.bind(fn, (opt_handler || this));
   this.modelChangeFns_.push(func);
-  return goog.getUid(func);
+  var id = goog.getUid(func);
+  fn = goog.bind(fn, opt_handler || this, this);
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 
@@ -445,12 +423,22 @@ mvc.Collection.prototype.modelChange = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bound object.
  */
 mvc.Collection.prototype.anyModelChange = function(fn, opt_handler) {
   var func = goog.bind(fn, (opt_handler || this));
   this.anyModelChangeFns_.push(func);
-  return goog.getUid(func);
+  var id = goog.getUid(func);
+  fn = goog.bind(fn, opt_handler || this, this);
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 
@@ -459,12 +447,22 @@ mvc.Collection.prototype.anyModelChange = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bound object.
  */
 mvc.Collection.prototype.bindAdd = function(fn, opt_handler) {
   var func = goog.bind(fn, (opt_handler || this));
   this.addedModelsFns_.push(func);
-  return goog.getUid(func);
+  var id = goog.getUid(func);
+  fn = goog.bind(fn, opt_handler || this, this);
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 
@@ -473,12 +471,22 @@ mvc.Collection.prototype.bindAdd = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bound object.
  */
 mvc.Collection.prototype.bindRemove = function(fn, opt_handler) {
   var func = goog.bind(fn, (opt_handler || this));
   this.removedModelsFns_.push(func);
-  return goog.getUid(func);
+  var id = goog.getUid(func);
+  fn = goog.bind(fn, opt_handler || this, this)
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 
@@ -486,7 +494,15 @@ mvc.Collection.prototype.bindRemove = function(fn, opt_handler) {
  * @inheritDoc
  */
 mvc.Collection.prototype.unbind = function(id) {
+  if(goog.isObject(id) && id.id)
+    id = id.id;
   return goog.array.removeIf(this.modelChangeFns_, function(fn) {
+    return goog.getUid(fn) == id;
+  }) || goog.array.removeIf(this.anyModelChangeFns_, function(fn) {
+    return goog.getUid(fn) == id;
+  }) || goog.array.removeIf(this.removedModelsFns_, function(fn) {
+    return goog.getUid(fn) == id;
+  }) || goog.array.removeIf(this.addedModelsFns_, function(fn) {
     return goog.getUid(fn) == id;
   }) || goog.base(this, 'unbind', id);
 };
