@@ -43,6 +43,18 @@ testInit = function() {
   assert('function should fire on init', a);
 };
 
+testInitWild = function() {
+  var a = 0;
+  var b = {};
+  var fn = function(){a++;};
+  med.on('testInit.blah.%', {
+    fn: goog.nullFunction,
+    init: fn
+  });
+  med.register(b, ['testInit.blah.fred.fire']);
+  assertEquals('function should fire on init', 1, a);
+};
+
 testDispose = function() {
   var a = false;
   var b = {};
