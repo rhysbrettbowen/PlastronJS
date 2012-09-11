@@ -12,7 +12,8 @@ goog.require('goog.object');
 
 /**
  * @constructor
- * @param {Object=} opt_options to define options
+ * @param {{split: string, wild: string, wildlvl: string}=} opt_options 
+ * to define options.
  */
 mvc.Mediator = function(opt_options) {
   /** @private */
@@ -20,7 +21,7 @@ mvc.Mediator = function(opt_options) {
   /** @private */
   this.listeners_ = {};
   if (opt_options) {
-    this.split_ = opt_options.wildlvl || this.split_;
+    this.split_ = opt_options.split || this.split_;
     this.wild_ = opt_options.wild || this.wild_;
     this.wildlvl_ = opt_options.wildlvl || this.wildlvl_;
   }
@@ -60,7 +61,7 @@ mvc.Mediator.prototype.wildlvl_ = '%';
  * lets components know that a message can be fired by an object.
  *
  * @param {Object} obj to register.
- * @param {Object|Array.<string>} messages that the object can broadcast.
+ * @param {string|Array.<string>} messages that the object can broadcast.
  * @param {boolean=} opt_noBroadcast don't add broadcast to object.
  */
 mvc.Mediator.prototype.register = function(obj, messages, opt_noBroadcast) {
@@ -68,9 +69,12 @@ mvc.Mediator.prototype.register = function(obj, messages, opt_noBroadcast) {
   if(!obj.broadcast && !opt_noBroadcast) {
     obj.broadcast = goog.bind(this.broadcast, this);
   }
+
+  if(!goog.isArrayLike(messages))
+    messages = [messages];
   // each message we save the object reference in an array so we know it
   // can provide that message
-  goog.array.forEach(messages, function(message) {
+  goog.array.forEach(/** @type {Array} */(messages), function(message) {
     this.available_[message] = this.available_[message] || [];
     goog.array.insert(this.available_[message], obj);
 
@@ -83,9 +87,9 @@ mvc.Mediator.prototype.register = function(obj, messages, opt_noBroadcast) {
               this.canFire_(message, key)) {
             listener.initDone = true;
             listener.disDone = false;
+            if(listener.init)
+              listener.init([obj]);
           }
-          if(listener.init)
-            listener.init([obj]);
         }, this);
       }, this);
     }
@@ -104,7 +108,7 @@ mvc.Mediator.prototype.matchMessage_ = function(key, message) {
   // escape for regex
   key = goog.string.regExpEscape(key);
   // change wildcards to regex
-  key.replace(this.wildRegex_, '.*')
+  key = key.replace(this.wildRegex_, '.*')
       .replace(this.wildlvlRegex_, '[^' + this.split_ + ']*');
   return !!message.match(new RegExp('^' + key + '$', 'i'));
 };
@@ -125,19 +129,21 @@ mvc.Mediator.prototype.canFireAvailable_ = function(key) {
  */
 mvc.Mediator.prototype.canFire_ = function(key, message) {
   var wildInd = key.indexOf(this.wild_);
+  var keyArr;
+  var messageArr;
   if (wildInd > -1)
-    key = key.substring(0, wildInd);
-  key = key.split(this.split_);
-  message = message.split(this.split_);
-  return goog.array.every(message, function(part, ind) {
-    if(!key[ind])
+    keyArr = key.substring(0, wildInd);
+  keyArr = key.split(this.split_);
+  messageArr = message.split(this.split_);
+  return goog.array.every(messageArr, function(part, ind) {
+    if(!keyArr[ind])
       return true;
     if(part.match(new RegExp(
-        '^' + goog.string.regExpEscape(key[ind])
+        '^' + goog.string.regExpEscape(keyArr[ind])
             .replace(this.wildlvlRegex_, '.*') + '$'), 'i'))
       return true;
     else if (wildInd > -1 && part.match(new RegExp(
-        '^' + goog.string.regExpEscape(key[ind])
+        '^' + goog.string.regExpEscape(keyArr[ind])
             .replace(this.wildlvlRegex_, '.*')), 'i'))
       return true;
     return false;
@@ -149,25 +155,28 @@ mvc.Mediator.prototype.canFire_ = function(key, message) {
  * removes the object from the register for that message
  *
  * @param {Object} obj to unregister.
- * @param {Array.<string>|string=} opt_messages an array of message to unregister the
- * object from being able to broadcast, or undefined to unregister from all.
+ * @param {Array.<string>|string=} opt_messages an array of message to 
+ * unregister the object from being able to broadcast, or undefined to
+ * unregister from all.
  */
 mvc.Mediator.prototype.unregister = function(obj, opt_messages) {
+  var messages = opt_messages || [];
   if(opt_messages && !goog.isArrayLike(opt_messages))
-    opt_messages = [opt_messages];
+    messages = [opt_messages];
 
   // remove the object from all available
   goog.object.forEach(this.available_, function(val, message) {
 
     // if it's not in the messages to remove then skip
-    if (opt_messages && !goog.array.find(opt_messages, function(opt) {
-      return opt.toLowerCase() ==
-          message.substring(0, opt.length).toLowerCase() &&
-          (message.length == opt.length ||
-          message.charAt(opt.length) == this.split_);
-    }, this)) {
+    if (opt_messages &&
+        !goog.array.find(/** @type {Array} */(messages), function(opt) {
+          return opt.toLowerCase() ==
+              message.substring(0, opt.length).toLowerCase() &&
+              (message.length == opt.length ||
+              message.charAt(opt.length) == this.split_);
+        }, this)
+    )
       return;
-    }
     // remove from the array
     goog.array.remove(val, obj);
   }, this);
@@ -190,11 +199,11 @@ mvc.Mediator.prototype.unregister = function(obj, opt_messages) {
       return;
     goog.array.forEach(list.slice(), function(listener) {
       if (!listener.disDone) {
-        listener.initDone = false;
         listener.disDone = true;
+        if(listener.dispose)
+          listener.dispose(listener.initDone);
+        listener.initDone = false;
       }
-      if(listener.dispose)
-        listener.dispose(obj);
     });
   }, this);
 };
@@ -251,6 +260,47 @@ mvc.Mediator.prototype.once = function(message, handler) {
   },this);
   uid = this.on(message, fn);
   return /** @type {number} */(uid);
+};
+
+
+/**
+ * return the listener by id.
+ * 
+ * @param {number} id id of the listener (from on).
+ * @return {?Object} the found listener.
+ */
+mvc.Mediator.prototype.getById = function(id) {
+  var ret;
+  goog.object.forEach(this.listeners_, function(listeners) {
+    ret = ret || goog.array.find(listeners, function(listener) {
+      return goog.getUid(listener) == id;
+    })
+  });
+  return ret;
+};
+
+
+/**
+ * if the init function has been run and not disposed.
+ * 
+ * @param {number} id id of the listener (from on).
+ * @return {?boolean}
+ */
+mvc.Mediator.prototype.isInit = function(id) {
+  var ret = this.getById(id);
+  return ret && ret.initDone;
+};
+
+
+/**
+ * if the listener has been disposed and not re-inited
+ * 
+ * @param {number} id id of the listener (from on).
+ * @return {?boolean}
+ */
+mvc.Mediator.prototype.isDisposed = function(id) {
+  var ret = this.getById(id);
+  return ret && ret.disDone;
 };
 
 
