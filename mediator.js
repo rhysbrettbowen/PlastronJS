@@ -38,7 +38,7 @@ mvc.Mediator.prototype.register = function(obj, messages) {
     // if we registered any listeners for a message that can now start we
     // fire it with the object
     if (this.available_[message].length == 1 && this.listeners_[message]) {
-      goog.array.forEach(this.listeners_[message], function(listener) {
+      goog.array.forEach(this.listeners_[message].slice(), function(listener) {
         if (listener.init)
           listener.init(obj);
       });
@@ -68,7 +68,7 @@ mvc.Mediator.prototype.unregister = function(obj, opt_messages) {
     // methods for listening objects
     if (goog.array.remove(val, obj) && !val.length) {
       if (this.listeners_[key]) {
-        goog.array.forEach(this.listeners_[key], function(listener) {
+        goog.array.forEach(this.listeners_[key].slice(), function(listener) {
           if (listener.dispose)
             listener.dispose(obj);
         });
@@ -167,7 +167,7 @@ mvc.Mediator.prototype.isListened = function(message) {
 mvc.Mediator.prototype.broadcast = function(message, opt_args) {
   if (!this.listeners_[message])
     return;
-  goog.array.forEach(this.listeners_[message], function(listener) {
+  goog.array.forEach(this.listeners_[message].slice(), function(listener) {
     if (goog.isFunction(listener)) {
       listener(opt_args);
     } else if (listener.fn) {
