@@ -205,8 +205,8 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
     model = [model];
   // if array then reverse and then run each model through this function
   goog.array.forEach(model.reverse(), function(mod) {
-    if (!goog.array.find(this.models_, function(mod) {
-      return mod.model == model;
+    if (!goog.array.find(this.models_, function(model) {
+      return model.model == mod;
     })) {
 
       // insert model and setup listeners for changes
