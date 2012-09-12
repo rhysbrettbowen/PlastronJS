@@ -84,7 +84,7 @@ mvc.Mediator.prototype.register = function(obj, messages, opt_noBroadcast) {
       goog.object.forEach(this.listeners_, function(val, key) {
         goog.array.forEach(val, function(listener) {
           if (!listener.initDone &&
-              this.canFire_(message, key)) {
+              this.canFire_(key, message)) {
             listener.initDone = true;
             listener.disDone = false;
             if(listener.init)

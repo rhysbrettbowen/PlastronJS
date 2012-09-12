@@ -109,6 +109,99 @@ var testClear = function() {
   assertEquals(coll.getLength(), 0);
 };
 
+/**
+ * Tests model addition through adding an object to a collection
+ */
+var testAdd = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+      'name': 'closure mvc 101'
+  });
+  collection.add({'name': 'Fred'});
+  assertEquals(collection.getLength(), 1);
+  assertTrue(collection.at(0) instanceof mvc.Model);
+};
+
+var testInsertObjectAtIndex = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+  });
+  var testName = 'Bob'
+  collection.add({'name': 'Fred'});
+  collection.add({'name': 'John'});
+  collection.add({'name': testName}, 1);
+
+  assertEquals(collection.at(1).get('name'), testName);
+};
+
+var testCollectionRemoveFilter = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+  });
+  collection.add({'shouldRemove': false, 'id': 1});
+  collection.add({'shouldRemove': true, 'id': 2});
+  collection.add({'shouldRemove': true, 'id': 3});
+  collection.add({'shouldRemove': false, 'id': 4});
+  collection.clear(true, function(model) {
+    return model.get('shouldRemove');
+  });
+  assertEquals(collection.getLength(), 2);
+  assertEquals(collection.at(0).get('id'), 1);
+  assertEquals(collection.at(1).get('id'), 4);
+};
+
+var testCollectionKeepFilter = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+  });
+  var collection = new mvc.Collection();
+  collection.add({'shouldKeep': false, 'id': 1});
+  collection.add({'shouldKeep': true, 'id': 2});
+  collection.add({'shouldKeep': true, 'id': 3});
+  collection.add({'shouldKeep': false, 'id': 4});
+  collection.keep(function(model) {
+    return model.get('shouldKeep');
+  }, true);
+  assertEquals(collection.getLength(), 2);
+  assertEquals(collection.at(0).get('id'), 2);
+  assertEquals(collection.at(1).get('id'), 3);
+};
+
+var testModelAdditionSequence = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+  });
+  var collection = new mvc.Collection();
+  var model1 = {'id': 1},
+      model2 = {'id': 2},
+      model3 = {'id': 3};
+
+  collection.add([model1, model2, model3]);
+  assertEquals(collection.at(0).get('id'), 1);
+  assertEquals(collection.at(1).get('id'), 2);
+  assertEquals(collection.at(2).get('id'), 3);
+};
+
 var testModelChange = function() {
   var coll = new mvc.Collection();
   coll.setComparator(function(a,b) {
