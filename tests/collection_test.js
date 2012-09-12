@@ -19,6 +19,14 @@ var testUnsortedCollection = function() {
   assertEquals('third object should be mock 3', test.at(2), model3);
 };
 
+var testUnsortedCollectionAdd = function() {
+  var test = new mvc.Collection({'models': [model1]});
+  test.add([model2, model3], 0);
+  assertEquals('first object should be mock 2', test.at(0), model2);
+  assertEquals('second object should be mock 3', test.at(1), model3);
+  assertEquals('third object should be mock 1', test.at(2), model1);
+}
+
 var testSortedCollection = function() {
   var sort = function(a, b) {return a.get('sort') - b.get('sort');};
   var test = new mvc.Collection();
@@ -67,8 +75,9 @@ var testPluck = function() {
     'c': 3
   });
   assertEquals('array should be [1,2,3]',
-      coll.pluck('a').toString(),
-      [1, 2, 3].toString());
+    [1, 2, 3].toString(),
+      coll.pluck('a').toString()
+      );
   var b = coll.pluck(['a', 'b']);
   assert('array should hold object with a, and b',
       b[0]['a'] == 1 &&
