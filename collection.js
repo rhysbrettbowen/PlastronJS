@@ -431,13 +431,29 @@ mvc.Collection.prototype.indexOf = function(model) {
  * remove all models from the collection
  *
  * @param {boolean=} opt_silent whether to supress change event.
+ * @param {function=} opt_filter function to detect models to remove.
  */
-mvc.Collection.prototype.clear = function(opt_silent) {
-  this.remove(this.getModels(), true);
+mvc.Collection.prototype.clear = function(opt_silent, opt_filter) {
+  var modelsToClear = this.getModels();
+  if (opt_filter) {
+    modelsToClear = goog.array.filter(modelsToClear, /** @type {Function} */(opt_filter));
+  }
+  this.remove(modelsToClear, true);
   this.modelChange_ = true;
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
   }
+};
+
+/**
+ * removes models that are not satisfying filter condition
+ * @param {function=} filter function to detect models to keep.
+ * @param {boolean=} opt_silent whether to suppress change event.
+ */
+mvc.Collection.prototype.keep = function(filter, opt_silent) {
+  return this.clear(opt_silent, function(model, index, array) { 
+    return !filter(model, index, array);
+  });
 };
 
 
