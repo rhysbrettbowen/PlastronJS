@@ -28,6 +28,8 @@ testListen = function() {
 };
 
 testUnlisten = function() {
+  listen = med.on('test', function() {});
+  assert(med.isListened('test'));
   med.off(listen);
   assert(!med.isListened('test'));
 };

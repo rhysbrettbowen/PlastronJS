@@ -310,17 +310,16 @@ mvc.Mediator.prototype.isDisposed = function(id) {
  * @param {number} uid of the listener to turn off.
  */
 mvc.Mediator.prototype.off = function(uid) {
-  var rem = [];
-  goog.object.forEach(this.listeners_, function(listener, key) {
+  var ret = false;
+  var listKey = null;
+  goog.object.forEach(this.listeners_, function(listener) {
     goog.array.removeIf(listener, function(el) {
       return goog.getUid(el) == uid;
     });
-    if(listener.length == 0)
-      rem.push(key);
   });
-  goog.array.forEach(rem, function(key) {
-    delete this.listeners_[key];
-  }, this);
+  if(ret && !this.listeners_[listKey].length)
+    delete this.listeners_[listKey];
+  return ret;
 };
 
 
