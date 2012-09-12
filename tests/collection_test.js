@@ -109,7 +109,6 @@ var testClear = function() {
   assertEquals(coll.getLength(), 0);
 };
 
-<<<<<<< HEAD
 /**
  * Tests model addition through adding an object to a collection
  */
@@ -183,7 +182,26 @@ var testCollectionKeepFilter = function() {
   assertEquals(collection.at(0).get('id'), 2);
   assertEquals(collection.at(1).get('id'), 3);
 };
-=======
+
+var testModelAdditionSequence = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+  });
+  var collection = new mvc.Collection();
+  var model1 = {'id': 1},
+      model2 = {'id': 2},
+      model3 = {'id': 3};
+
+  collection.add([model1, model2, model3]);
+  assertEquals(collection.at(0).get('id'), 1);
+  assertEquals(collection.at(1).get('id'), 2);
+  assertEquals(collection.at(2).get('id'), 3);
+};
+
 var testModelChange = function() {
   var coll = new mvc.Collection();
   coll.setComparator(function(a,b) {
@@ -388,4 +406,3 @@ var testBindRemoveChangeUnbind = function() {
   coll.remove(model2);
   assertEquals(run, 1);
 };
->>>>>>> 06d924a729f1042f18aeda48cf2d4e4e6d0fb377

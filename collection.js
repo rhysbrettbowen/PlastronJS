@@ -204,7 +204,7 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
   if(!goog.isArray(model))
     model = [model];
   // if array then reverse and then run each model through this function
-  goog.array.forEach(model.reverse(), function(mod) {
+  goog.array.forEach(model, function(mod) {
 
     // if model is passed as an object
     var isModel = mod instanceof mvc.Model;
