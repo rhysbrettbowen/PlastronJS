@@ -43,6 +43,49 @@ testInit = function() {
   assert('function should fire on init', a);
 };
 
+testInitWild = function() {
+  var a = 0;
+  var b = {};
+  var fn = function(){a++;};
+  med.on('testInit.blah.%', {
+    fn: goog.nullFunction,
+    init: fn
+  });
+  med.register(b, ['testInit.blah.fred.fire']);
+  assertEquals('function should fire on init', 1, a);
+};
+
+testListenWild = function() {
+  var a = 0;
+  var b = {};
+  var fn = function(){a++;};
+  med.on('abc*.efg.%.klmn', fn);
+  med.broadcast('abcpef.sdfsd.efg.uyt.klmn.pop');
+  assertEquals('function should not fire', 0, a);
+  med.broadcast('abcpef.sdfsd.efg.uy.t.klmn');
+  assertEquals('function should not fire', 0, a);
+  med.broadcast('abcpef.sdfsd.efg.uyt.klmn');
+  assertEquals('function should fire', 1, a);
+};
+
+testListenWildChange = function() {
+  med = new mvc.Mediator({
+    split: ':',
+    wild: '.',
+    wildlvl: '+'
+  })
+  var a = 0;
+  var b = {};
+  var fn = function(){a++;};
+  med.on('abc.:efg:+:klmn', fn);
+  med.broadcast('abcpef:sdfsd:efg:uyt:klmn:pop');
+  assertEquals('function should not fire', 0, a);
+  med.broadcast('abcpef:sdfsd:efg:uy:t:klmn');
+  assertEquals('function should not fire', 0, a);
+  med.broadcast('abcpef:sdfsd:efg:uyt:klmn');
+  assertEquals('function should fire', 1, a);
+};
+
 testDispose = function() {
   var a = false;
   var b = {};

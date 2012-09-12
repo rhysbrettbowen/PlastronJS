@@ -656,13 +656,21 @@ mvc.Model.prototype.change_ = function() {
 /**
  * @param {Function} fn function to run when model is disposed.
  * @param {Object=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
   fn = goog.bind(fn, (opt_handler || this));
   var uid = goog.getUid(fn);
   this.onUnload_.push(fn);
-  return uid;
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: uid,
+    unbind: goog.bind(this.unbind, this, uid)
+  };
+  return ret;
 };
 
 
@@ -674,8 +682,8 @@ mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
  *
  * @param {Array|string} name of attributes to listen to.
  * @param {Function} fn function to run when change.
- * @param {*=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bind = function(name, fn, opt_handler) {
   if (goog.isString(name))
@@ -687,17 +695,27 @@ mvc.Model.prototype.bind = function(name, fn, opt_handler) {
   };
   bind.cid = goog.getUid(bind);
   this.bound_.push(bind);
-  return bind.cid;
+  var ret = {
+    fire: goog.bind(function() {
+      goog.bind(fn, opt_handler || this)(this.get(name), this);
+      return ret;
+    }, this),
+    id: bind.cid,
+    unbind: goog.bind(this.unbind, this, bind.cid)
+  };
+  return ret;
 };
 
 
 /**
  * unbind a listener by id
  *
- * @param {number} id returned form bind or bindall.
+ * @param {Object|number} id returned form bind or bindall.
  * @return {boolean} if found and removed.
  */
 mvc.Model.prototype.unbind = function(id) {
+  if(goog.isObject(id) && id.id)
+    id = id.id;
   return goog.array.removeIf(this.bound_, function(bound) {
     return (bound.cid == id);
   }) || goog.object.remove(this.boundAll_, id) ||
@@ -712,13 +730,22 @@ mvc.Model.prototype.unbind = function(id) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bindAll = function(fn, opt_handler) {
   var bound = goog.bind(fn, (opt_handler || this));
   var id = goog.getUid(bound);
   goog.object.set(this.boundAll_, '' + id, bound);
-  return id;
+  fn = goog.bind(fn, opt_handler || this, this);
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 

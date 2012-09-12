@@ -20,12 +20,12 @@ goog.require('goog.ui.Component');
  */
 mvc.Control = function(model) {
   goog.base(this);
-  this.setModel(model);
   this.eventHolder_ = {
     listeners: {},
     handlers: {}
   };
   this.modelListeners_ = [];
+  this.setModel(model);
 };
 goog.inherits(mvc.Control, goog.ui.Component);
 
@@ -39,6 +39,40 @@ mvc.Control.Fn = {
   TEXT: goog.dom.setTextContent,
   VAL: function(el, val) {el.value = val;},
   CLASS: goog.dom.classes.add
+};
+
+
+/**
+ * @param {mvc.Model} model to set the model to.
+ * @param {boolean=} opt_dontFire whether to suppress firing all change events.
+ */
+mvc.Control.prototype.setModel = function(model, opt_dontFire) {
+
+  // if there is a previous model then unbind the listeners, but keep wrappers
+  if(this.getModel())
+    goog.array.forEach(goog.array.map(this.modelListeners_, function(listener) {
+      return listener.id;
+    }), this.unbind_, this);
+
+  // set the model
+  goog.base(this, 'setModel', model);
+
+  // refill the wrappers
+  goog.array.forEach(this.modelListeners_, function(modelSetup) {
+    // get the models boundEvent
+    var ret = modelSetup.fn.apply(this, modelSetup.args);
+    // setup aliases
+    modelSetup.bound = ret;
+    modelSetup.fire = ret.fire;
+    modelSetup.unbind = goog.bind(this.unbind, this, ret.id);
+    modelSetup.id = ret.id;
+    // fire the listeners
+    if (!opt_dontFire && !goog.array.contains(
+        [this.bindAdd_,
+        this.bindRemove_,
+        this.bindUnload_], modelSetup.fn))
+      modelSetup.fire();
+  }, this);
 };
 
 
@@ -93,9 +127,9 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire. if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.on = function(
     eventName, fn, opt_className, opt_handler, opt_priority) {
@@ -139,7 +173,18 @@ mvc.Control.prototype.on = function(
             return obj.priority <= (opt_priority || 50);
       }
       ) + 1);
-  return obj.uid;
+  var ret = {
+    fire: goog.bind(function(opt_target) {
+      var target = this.getElement();
+      if(opt_target)
+        target = opt_target;
+      fn.call(opt_handler || this, new goog.events.Event(eventName, target));
+      return ret;
+    }, this),
+    id: obj.uid,
+    off: goog.bind(this.off, this, obj.uid)
+  };
+  return ret;
 };
 
 
@@ -151,9 +196,9 @@ mvc.Control.prototype.on = function(
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire.if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.once = function(
     eventName, fn, opt_className, opt_handler, opt_priority) {
@@ -161,7 +206,7 @@ mvc.Control.prototype.once = function(
   var onceFn = function() {
     fn.apply(/** @type {Object} */(opt_handler || this),
         Array.prototype.slice.call(arguments));
-    this.off(uid);
+    uid.off();
   };
   uid = this.on(eventName, onceFn, opt_className);
   return uid;
@@ -175,9 +220,9 @@ mvc.Control.prototype.once = function(
  * @param {string|Array.<string>|Function=} opt_className or names to
  * check element against to see if listener function should fire. if it is
  * a function then it takes the event and returns true if it matches.
- * @param {*=} opt_handler object to bind 'this' to, otherwise mvc.Control.
+ * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
- * @return {number} uid to use with off method.
+ * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.click = function(
     fn, opt_className, opt_handler, opt_priority) {
@@ -189,9 +234,11 @@ mvc.Control.prototype.click = function(
 /**
  * take off a lister by it's id
  *
- * @param {string} uid of event listener to turn off.
+ * @param {Object|string} uid of event listener to turn off.
  */
 mvc.Control.prototype.off = function(uid) {
+  if(goog.isObject(uid) && uid.id)
+    uid = uid.id;
   goog.object.forEach(this.eventHolder_.handlers, function(val, key) {
     goog.array.removeIf(val, function(handler) {
       return handler.uid == uid;
@@ -231,14 +278,30 @@ mvc.Control.prototype.getEls = function(selector) {
  *
  * @param {Array|string} name of attributes to listen to.
  * @param {Function} fn function to run when change.
- * @param {*=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bind = function(name, fn, opt_handler) {
-  var id = this.getModel().bind(name, fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.bind_, goog.array.slice(arguments, 0));
 };
+
+
+/**
+ * Allows easy binding of a model's attribute to an element or a function.
+ * bind('name', function(value), handler) allows you to run a function and
+ * optionally bind it to the handler. You can also pass in an array of names
+ * to listen for a change on any of the attributes.
+ *
+ * @private
+ * @param {Array|string} name of attributes to listen to.
+ * @param {Function} fn function to run when change.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.bind_ = function(name, fn, opt_handler) {
+  return this.getModel().bind(name, fn, opt_handler || this);
+};
+
 
 
 /**
@@ -246,12 +309,23 @@ mvc.Control.prototype.bind = function(name, fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindAll = function(fn, opt_handler) {
-  var id = this.getModel().bindAll(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.bindAll_, goog.array.slice(arguments, 0));
+};
+
+
+/**
+ * bind to any change event
+ *
+ * @private
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.bindAll_ = function(fn, opt_handler) {
+  return this.getModel().bindAll(fn, opt_handler || this);
 };
 
 
@@ -260,12 +334,23 @@ mvc.Control.prototype.bindAll = function(fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindAdd = function(fn, opt_handler) {
-  var id = this.getModel().bindAdd(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.bindAdd_, goog.array.slice(arguments, 0));
+};
+
+
+/**
+ * bind to any change event
+ *
+ * @private
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.bindAdd_ = function(fn, opt_handler) {
+  return this.getModel().bindAdd(fn, opt_handler || this);
 };
 
 
@@ -274,25 +359,70 @@ mvc.Control.prototype.bindAdd = function(fn, opt_handler) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindRemove = function(fn, opt_handler) {
-  var id = this.getModel().bindRemove(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.bindRemove_, goog.array.slice(arguments, 0));
+};
+
+
+/**
+ * bind to any change event
+ *
+ * @private
+ * @param {Function} fn function to bind.
+ * @param {Object=} opt_handler object to bind 'this' to.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.bindRemove_ = function(fn, opt_handler) {
+  return this.getModel().bindRemove(fn, opt_handler || this);
 };
 
 
 /**
  * @param {Function} fn function to run when model is disposed.
  * @param {Object=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.bindUnload = function(fn, opt_handler) {
-  var id = this.getModel().bindUnload(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.bindUnload_, goog.array.slice(arguments, 0));
 };
+
+
+/**
+ * @private
+ * @param {Function} fn function to run when model is disposed.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.bindUnload_ = function(fn, opt_handler) {
+  return this.getModel().bindUnload(fn, opt_handler || this);
+};
+
+
+/**
+ * creates a wrapper around the boundEvent
+ * 
+ * @param {Function} fn the function the wrapper should call.
+ * @param {Array=} opt_args arguments to pass it.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.setupBoundEvent_ = function(fn, opt_args) {
+  var id = fn.apply(this, opt_args || []);
+
+  var ret = {
+    id: id.id,
+    bound: id,
+    fire: id.fire,
+    unbind: goog.bind(this.unbind, this, id.id),
+    fn: fn,
+    args: opt_args || []
+  };
+  
+  this.modelListeners_.push(ret);
+
+  return ret;
+}
 
 
 /**
@@ -300,36 +430,80 @@ mvc.Control.prototype.bindUnload = function(fn, opt_handler) {
  *
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.anyModelChange = function(fn, opt_handler) {
-  var id = this.getModel().anyModelChange(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.anyModelChange_,
+      goog.array.slice(arguments, 0));
 };
 
 
 /**
  * use this to bind functions to a change in any of the collections models
  *
+ * @private
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
- * @return {number} uid to use with unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.anyModelChange_ = function(fn, opt_handler) {
+  return this.getModel().anyModelChange(fn, opt_handler || this);
+};
+
+/**
+ * use this to bind functions to a change in any of the collections models
+ *
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.modelChange = function(fn, opt_handler) {
-  var id = this.getModel().modelChange(fn, opt_handler || this);
-  this.modelListeners_.push(id);
-  return id;
+  return this.setupBoundEvent_(this.modelChange_,
+      goog.array.slice(arguments, 0));
+};
+
+
+/**
+ * use this to bind functions to a change in any of the collections models
+ *
+ * @private
+ * @param {Function} fn function to run on model change.
+ * @param {Object=} opt_handler to set 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} bind object.
+ */
+mvc.Control.prototype.modelChange_ = function(fn, opt_handler) {
+  return this.getModel().modelChange(fn, opt_handler || this);
 };
 
 
 /**
  * unbind a listener by id
  *
- * @param {number} id returned form bind or bindall.
+ * @param {number|Object} id returned form bind or bindall.
  * @return {boolean} if found and removed.
  */
 mvc.Control.prototype.unbind = function(id) {
+  if (goog.isObject(id))
+    id = id;
+  goog.array.removeIf(this.modelListeners_, function(listener) {
+    if (goog.isObject(listener))
+      listener = listener.id;
+    return listener == id;
+  });
+  return this.unbind_(id);
+};
+
+
+/**
+ * unbind a listener by id
+ *
+ * @private
+ * @param {number|Object} id returned from bind or bindall.
+ * @return {boolean} if found and removed.
+ */
+mvc.Control.prototype.unbind_ = function(id) {
+  if (goog.isObject(id))
+    id = id;
   return this.getModel().unbind(id);
 };
 
@@ -338,7 +512,7 @@ mvc.Control.prototype.unbind = function(id) {
  */
 mvc.Control.prototype.disposeInternal = function() {
   goog.array.forEach(this.modelListeners_, function(id) {
-    this.unbind(id);
+    id.unbind();
   }, this);
   this.eventHolder_ = null;
   goog.base(this, 'disposeInternal');

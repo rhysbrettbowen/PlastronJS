@@ -1,6 +1,6 @@
 {
     "id": "v4",
-    "inputs": ["../collection.js", "../control.js", "../mediator.js", "../model.js", "../router.js", "../store.js", "../sync/sync.js", "../sync/ajax.js"],
+    "inputs": ["../collection.js", "../control.js", "../mediator.js", "../model.js", "../router.js", "../store.js", "../sync/sync.js", "../sync/ajax.js", "../sync/sync.js", "../sync/local.js"],
     "paths": ".",
     "mode": "ADVANCED",
     "level": "VERBOSE",

@@ -186,6 +186,17 @@ task.unbind(bound);
 
 in the example above we saved a uid in bound that we can use to unbind a listener. All bind functions return a uid that can be used with unbind.
 
+recently the mvc.Model bind functions started returning boundEvent objects. You can still pass these to unbind or you can call unbind directly upon them. You can also call the fire function to execute the function (this can be handy when you want the function to run once at the start to setup the value, for instance:)
+
+```javascript
+var bound = model.bind('text', function(text) {
+  element.setText(text);
+}).fire();
+
+// later
+bound.unbind();
+```
+
 ### binding keys to a function ###
 
 the model class comes with a function getBinder that can be used to bind a function to a key. For instance you can use it for convenience methods to get and set keys:
@@ -232,8 +243,8 @@ There are also other functions that can take parameters such as the boolean "sil
 - getChanges: tells you what values has changed since the last change event used internally by bind to figure out what to fire change events for
 - revert: rolls back to the previous attributes
 - fetch(callback, silent): updates the model using it's sync
-- save: tells the sync to create/update
-- dispose(bool): disposes of the model and all it's listeners. Pass true if you want the model to call the model's sync's delete function
+- save(opt_callback): tells the sync to create/update
+- dispose(bool, opt_callback): disposes of the model and all it's listeners. Pass true if you want the model to call the model's sync's delete function
 
 ## Schema ##
 
@@ -343,6 +354,7 @@ A collection also offers these aditional methods:
 - getById(id): returns a model by it's id
 - getModels(Function): returns an array of the models optionally filtered by a function that takes the model and the index and returns true if it should be returned in the filter otherwise false
 - at(index): return the model at an index
+- indexOf(model): return the index of the model, or -1 if it is not in the collection
 - clear: clears all the models
 - modelChange(function, handler): like bind for model but is bound only on changes to the collections children being sorted or added/removed
 - anyModelChange(function, handler): similar to modelChange but will fire when any model is changed regardless of it it updates sort order
@@ -384,7 +396,7 @@ control.getModel() == model; // true
 
 a control has the function getEls(selector) which can find elements in it's DOM for you. All you need to do is pass it a valid selector that can be in the form of:
 
-- ".className"
+- ".className" || "-className"
 - "#elementId"
 - "tagName[ .className]"
 
@@ -422,6 +434,14 @@ this.click(function(){alert("click");}, function(e) {return e.clientX<100;});
 ```
 
 this will fire for clicks in the left 100px of the screen that are on the control.
+
+These functions will also return a boundEvent object. The function can be fired using .fire(opt_target) and turned off using off().
+
+```javascript
+var bound = this.on('click', function(e) {alert(e.target);}).fire(this.getEls('-button')[0]);
+// later
+bound.off()
+```
 
 ### handling priorities ###
 
@@ -524,6 +544,23 @@ function(fragment,id,edit,entity,query,queryVals) {
 }
 ```
 
+you can setup a new route to listen for and navigate to it like this:
+
+```javascript
+var router = new mvc.Router();
+router.route("/note=:id[/edit]{/:entity}[?*]",
+    function(fragment,id,edit,entity,query,queryVals) {
+      console.log(fragment); // /note=1234567890/edit/message?abc=123
+      console.log(id); // 1234567890
+      console.log(edit); // /edit
+      console.log(entity); // message
+      console.log(query); // ?abc=123
+      console.log(queryVals); // abc=123
+    }
+);
+router.navigate('/note=1234567890/edit/message?abc=123');
+```
+
 ## mvc.Mediator ##
 
 mvc.Mediator allows message passing between components. It's most useful as a singleton so you could do this:
@@ -556,6 +593,15 @@ you can then run the tests by going to:
     http://localhost:9810
 
 ### changelog ###
+
+### v1.0.1 beta ###
+
+- more tests
+- callbacks for save and dispose functions
+- fixed HTML5 router
+- added boundEvent objects
+- indexOf in collection
+- collention#newModel can take modelType
 
 ### v1.0 beta ###
 

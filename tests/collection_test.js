@@ -109,6 +109,7 @@ var testClear = function() {
   assertEquals(coll.getLength(), 0);
 };
 
+<<<<<<< HEAD
 /**
  * Tests model addition through adding an object to a collection
  */
@@ -182,3 +183,209 @@ var testCollectionKeepFilter = function() {
   assertEquals(collection.at(0).get('id'), 2);
   assertEquals(collection.at(1).get('id'), 3);
 };
+=======
+var testModelChange = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.modelChange(fn);
+  model1.set('sort', 4);
+  assertEquals(run, 0);
+  model1.set('sort', 0);
+  assertEquals(run, 1);
+};
+
+var testModelChangeFire = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.modelChange(fn).fire();
+  assertEquals(run, 1);
+  model1.set('sort', 4);
+  assertEquals(run, 1);
+  model1.set('sort', 0);
+  assertEquals(run, 2);
+};
+
+var testModelChangeUnbind = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  var bound = coll.modelChange(fn);
+  model1.set('sort', 0);
+  assertEquals(run, 1);
+  bound.unbind();
+  model1.set('sort', 4);
+  assertEquals(run, 1);
+};
+
+var testAnyModelChange = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.anyModelChange(fn);
+  model1.set('sort', 4);
+  assertEquals(run, 1);
+  model1.set('sort', 0);
+  assertEquals(run, 2);
+};
+
+var testAnyModelChangeFire = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.anyModelChange(fn).fire();
+  assertEquals(run, 1);
+  model1.set('sort', 4);
+  assertEquals(run, 2);
+  model1.set('sort', 0);
+  assertEquals(run, 3);
+};
+
+var testAnyModelChangeUnbind = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  var bound = coll.anyModelChange(fn);
+  model1.set('sort', 0);
+  assertEquals(1, run);
+  bound.unbind();
+  model1.set('sort', 4);
+  assertEquals(1, run);
+};
+
+var testBindAddChange = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.bindAdd(fn);
+  coll.add(new mvc.Model({'sort': 4}));
+  assertEquals(run, 1);
+  coll.newModel({'sort': 0});
+  assertEquals(run, 2);
+};
+
+var testBindAddChangeFire = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.bindAdd(fn).fire();
+  assertEquals(run, 1);
+};
+
+var testBindAddChangeUnbind = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  var bound = coll.bindAdd(fn);
+  coll.newModel({'sort': 0});
+  assertEquals(run, 1);
+  bound.unbind();
+  coll.newModel({'sort': 0});
+  assertEquals(run, 1);
+};
+
+var testBindRemoveChange = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  coll.bindRemove(fn);
+  coll.remove(new mvc.Model({'sort': 4}));
+  assertEquals(run, 0);
+  coll.remove(model1);
+  assertEquals(run, 1);
+};
+
+var testBindRemoveChangeFire = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  var bound = coll.bindRemove(fn);
+  bound.fire();
+  assertEquals(1, run);
+};
+
+var testBindRemoveChangeUnbind = function() {
+  var coll = new mvc.Collection();
+  coll.setComparator(function(a,b) {
+    return a.get('sort') - b.get('sort');
+  });
+  coll.add([model1, model2, model3]);
+  var run = 0;
+  var fn = function() {
+    run++;
+  };
+  var bound = coll.bindRemove(fn);
+  coll.remove(model1);
+  assertEquals(run, 1);
+  bound.unbind();
+  coll.remove(model2);
+  assertEquals(run, 1);
+};
+>>>>>>> 06d924a729f1042f18aeda48cf2d4e4e6d0fb377
