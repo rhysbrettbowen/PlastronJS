@@ -237,7 +237,11 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
     return insert;
   }
 
-
+  // if object is passed as model
+  var isModel = model instanceof mvc.Model;
+  if (!isModel) {
+    model = this.createModel(model);
+  }
 
   // if model is not in the list
   if (!goog.array.find(this.models_, function(mod) {
@@ -285,10 +289,21 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
  */
 mvc.Collection.prototype.newModel = function(
     opt_options, opt_silent, opt_modelType) {
-  var model = new (opt_modelType || this.modelType_)(opt_options);
+  var model = this.createModel(opt_options, opt_modelType);
   this.add(model, 0, opt_silent);
   return model;
 };
+
+/**
+ * create model from object
+ * @param {Object=} opt_options to pass to the model constructor.
+ * @param {function(new:mvc.Model, Object=)=} opt_modelType constructor for
+ * the new model. 
+ * @return {mvc.Model} the newly created model
+ */
+mvc.Collection.prototype.createModel = function(opt_options, opt_modelType) {
+  return new (opt_modelType || this.modelType_)(opt_options);
+}
 
 
 /**

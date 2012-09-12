@@ -130,6 +130,31 @@ var testRouteExecutedOnceOnly = function() {
    assertEquals(executionTimes, 1);
 }
 
+/**
+ * Test router to run all route handlers while redirecting from one route to another
+ */
+var testRunAllRoutesWhileRedirecting = function() {
+    var firstRoute = "/start",
+        endRoute = "/end",
+        triggerCounter = 0;
+
+    router.navigate(endRoute);
+    router.route(firstRoute, function() {
+        triggerCounter++;
+        if (triggerCounter < 3) {
+            router.navigate(endRoute);
+        }
+    });
+    router.route(endRoute, function() {
+        triggerCounter++;
+        if (triggerCounter < 3) {
+            router.navigate(firstRoute);
+        }
+    });
+    router.navigate(firstRoute);
+    assertEquals(triggerCounter, 3);
+}
+
 
 testCase = new goog.testing.ContinuationTestCase();
 testCase.autoDiscoverTests();

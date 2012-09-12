@@ -109,3 +109,36 @@ var testClear = function() {
   assertEquals(coll.getLength(), 0);
 };
 
+/**
+ * Tests model addition through adding an object to a collection
+ */
+var testAdd = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+      'name': 'closure mvc 101'
+  });
+  collection.add({'name': 'Fred'});
+  assertEquals(collection.getLength(), 1);
+  assertTrue(collection.at(0) instanceof mvc.Model);
+};
+
+var testInsertObjectAtIndex = function() {
+  var testModel = function(options){
+    goog.base(this, options)
+  };
+  goog.inherits(testModel, mvc.Model);
+  var collection = new mvc.Collection({
+      'modelType': testModel,
+      'name': 'closure mvc 101'
+  });
+  var testName = 'Bob'
+  collection.add({'name': 'Fred'});
+  collection.add({'name': 'John'});
+  collection.add({'name': testName}, 1);
+
+  assertEquals(collection.at(1).get('name'), testName);
+};
