@@ -121,9 +121,9 @@ mvc.Router.prototype.onChange_ = function() {
         previous: this.currentFragment_,
         current: fragment
     });
+    this.currentFragment_ = fragment;
     goog.array.forEach(this.routes_ || [], function(route) {
       this.runRouteIfMatches_(route, fragment);
     }, this);
-    this.currentFragment_ = fragment;
   }
 };

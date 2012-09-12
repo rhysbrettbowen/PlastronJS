@@ -204,39 +204,44 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
   if(!goog.isArray(model))
     model = [model];
   // if array then reverse and then run each model through this function
-  goog.array.forEach(model.reverse(), function(mod) {
+  goog.array.forEach(model, function(mod) {
+
+    // if model is passed as an object
+    var isModel = mod instanceof mvc.Model;
+    if (!isModel) {
+        mod = this.createModel(mod);
+    }
+
     if (!goog.array.find(this.models_, function(model) {
       return model.model == mod;
     })) {
 
-      // insert model and setup listeners for changes
-      insert = true;
-      this.modelChange_ = true;
-      this.anyModelChange_ = true;
-      var changeId = mod.bindAll(goog.bind(function() {
+        // insert model and setup listeners for changes
+        insert = true;
+        this.modelChange_ = true;
         this.anyModelChange_ = true;
-        this.sort();
-      }, this));
-      var unloadId = mod.bindUnload(function(e) {
-        this.remove(model);
-      }, this);
+        var changeId = mod.bindAll(goog.bind(function() {
+          this.anyModelChange_ = true;
+          this.sort();
+        }, this));
+        var unloadId = mod.bindUnload(function(e) {
+          this.remove(model);
+        }, this);
 
-      goog.array.insertAt(this.models_, {
-        model: mod,
-        unload: unloadId,
-        change: changeId
-      }, (opt_ind || this.models_.length));
-      goog.array.insert(this.addedModels_, mod);
+        goog.array.insertAt(this.models_, {
+          model: mod,
+          unload: unloadId,
+          change: changeId
+        }, (opt_ind || this.models_.length));
+        goog.array.insert(this.addedModels_, mod);
 
-    }
-  }, this);
-
-  this.length = this.models_.length;
-  this.sort(true);
-  if (insert && !opt_silent)
-    this.change();
-  return insert;
-
+      }
+    }, this);
+    this.length = this.models_.length;
+    this.sort(true);
+    if (insert && !opt_silent)
+      this.change();
+    return insert;
 };
 
 
@@ -252,10 +257,21 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
  */
 mvc.Collection.prototype.newModel = function(
     opt_options, opt_silent, opt_modelType) {
-  var model = new (opt_modelType || this.modelType_)(opt_options);
+  var model = this.createModel(opt_options, opt_modelType);
   this.add(model, 0, opt_silent);
   return model;
 };
+
+/**
+ * create model from object
+ * @param {Object=} opt_options to pass to the model constructor.
+ * @param {function(new:mvc.Model, Object=)=} opt_modelType constructor for
+ * the new model. 
+ * @return {mvc.Model} the newly created model
+ */
+mvc.Collection.prototype.createModel = function(opt_options, opt_modelType) {
+  return new (opt_modelType || this.modelType_)(opt_options);
+}
 
 
 /**
@@ -384,13 +400,29 @@ mvc.Collection.prototype.indexOf = function(model) {
  * remove all models from the collection
  *
  * @param {boolean=} opt_silent whether to supress change event.
+ * @param {function=} opt_filter function to detect models to remove.
  */
-mvc.Collection.prototype.clear = function(opt_silent) {
-  this.remove(this.getModels(), true);
+mvc.Collection.prototype.clear = function(opt_silent, opt_filter) {
+  var modelsToClear = this.getModels();
+  if (opt_filter) {
+    modelsToClear = goog.array.filter(modelsToClear, /** @type {Function} */(opt_filter));
+  }
+  this.remove(modelsToClear, true);
   this.modelChange_ = true;
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
   }
+};
+
+/**
+ * removes models that are not satisfying filter condition
+ * @param {function=} filter function to detect models to keep.
+ * @param {boolean=} opt_silent whether to suppress change event.
+ */
+mvc.Collection.prototype.keep = function(filter, opt_silent) {
+  return this.clear(opt_silent, function(model, index, array) { 
+    return !filter(model, index, array);
+  });
 };
 
 
@@ -444,7 +476,7 @@ mvc.Collection.prototype.anyModelChange = function(fn, opt_handler) {
 
 /**
  * use this to bind function when a model is added
- *
+ 
  * @param {Function} fn function to run on model change.
  * @param {Object=} opt_handler to set 'this' of function.
  * @return {{fire: Function, id: number, unbind: Function}} bound object.
