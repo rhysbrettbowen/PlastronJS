@@ -105,10 +105,13 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
     // if no selector or matches selector then fire
     if (!handler.selectors.length ||
             goog.array.some(handler.selectors, function(className) {
-          return goog.isFunction(className) ?
-              className(e) :
-              goog.dom.getAncestorByClass(/** @type {Node} */(e.target),
-                  className);
+          if (goog.isFunction(className))
+            return className(e);
+          var ret =  goog.dom.getAncestorByClass(
+                  /** @type {Node} */(e.target), className);
+          if (ret)
+            e.target = ret;
+          return ret;
             })) {
       goog.bind(handler.fn, handler.handler)(e);
     }
