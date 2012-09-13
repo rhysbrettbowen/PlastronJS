@@ -366,7 +366,13 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
               this.parseSchemaFn_(this.schema_[key].set), this)(val, this);
         else
           this.attr_[key] = val;
-        success = true;
+        if(this.schema_[key] && this.schema_[key].cmp) {
+          if(!this.schema_[key].cmp(this.get(key), this.prev(key))) {
+            success = true;
+          }
+        } else if(this.get(key) !== this.prev(key)) {
+          success = true;
+        }
       } catch (err) {
         if (err.isValidateError)
           this.handleErr_(err);
