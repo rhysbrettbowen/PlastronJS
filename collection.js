@@ -379,7 +379,7 @@ mvc.Collection.prototype.indexOf = function(model) {
  * remove all models from the collection
  *
  * @param {boolean=} opt_silent whether to supress change event.
- * @param {function=} opt_filter function to detect models to remove.
+ * @param {Function=} opt_filter function to detect models to remove.
  */
 mvc.Collection.prototype.clear = function(opt_silent, opt_filter) {
   var modelsToClear = this.getModels();
@@ -395,7 +395,7 @@ mvc.Collection.prototype.clear = function(opt_silent, opt_filter) {
 
 /**
  * removes models that are not satisfying filter condition
- * @param {function=} filter function to detect models to keep.
+ * @param {Function=} filter function to detect models to keep.
  * @param {boolean=} opt_silent whether to suppress change event.
  */
 mvc.Collection.prototype.keep = function(filter, opt_silent) {
