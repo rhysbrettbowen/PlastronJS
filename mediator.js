@@ -114,6 +114,12 @@ mvc.Mediator.prototype.matchMessage_ = function(key, message) {
 };
 
 
+/**
+ * checks to see if there is an availble listener for the key.
+ * 
+ * @param {string} key to be broadcast.
+ * @return {boolean} whether there is a match.
+ */
 mvc.Mediator.prototype.canFireAvailable_ = function(key) {
   return goog.array.some(goog.object.getKeys(this.available_),
       goog.bind(this.canFire_, this, key));
@@ -239,6 +245,7 @@ mvc.Mediator.prototype.on = function(message, fn, opt_handler) {
     fn = {fn: fn};
   }
   fn.fn = goog.bind(fn.fn, opt_handler || this);
+  fn.id = opt_handler || this;
   goog.array.insert(this.listeners_[message],
       fn);
   return goog.getUid(fn);
@@ -250,12 +257,13 @@ mvc.Mediator.prototype.on = function(message, fn, opt_handler) {
  *
  * @param {string} message to listen to.
  * @param {Function} handler the function to run on a message.
+ * @param {Object=} opt_handler to use as 'this' for the function.
  * @return {number} the id to pass to off method.
  */
-mvc.Mediator.prototype.once = function(message, handler) {
+mvc.Mediator.prototype.once = function(message, handler, opt_handler) {
   var uid;
   var fn = goog.bind(function() {
-    handler.apply(this, Array.prototype.slice.call(arguments, 0));
+    handler.apply(opt_handler || this, goog.array.slice(arguments, 0));
     this.off(uid);
   },this);
   uid = this.on(message, fn);
@@ -307,18 +315,21 @@ mvc.Mediator.prototype.isDisposed = function(id) {
 /**
  * remove the listener by it's id
  *
- * @param {number} uid of the listener to turn off.
+ * @param {Object} uid of the listener to turn off.
  */
 mvc.Mediator.prototype.off = function(uid) {
   var ret = false;
-  var listKey = null;
-  goog.object.forEach(this.listeners_, function(listener) {
-    goog.array.removeIf(listener, function(el) {
-      return goog.getUid(el) == uid;
-    });
+  var rem = [];
+  goog.object.forEach(this.listeners_, function(listener, key) {
+    while(goog.array.removeIf(listener, function(el) {
+      return goog.getUid(el) == uid || el.id == uid;
+    })) {}
+    if(!listener.length)
+      rem.push(key);
   });
-  if(ret && !this.listeners_[listKey].length)
-    delete this.listeners_[listKey];
+  goog.array.forEach(rem, function(key) {
+    delete this.listeners_[key];
+  }, this);
   return ret;
 };
 

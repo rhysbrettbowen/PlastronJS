@@ -76,6 +76,8 @@ mvc.Model = function(opt_options) {
   this.boundAll_ = {};
   this.onUnload_ = [];
 
+  this.autosaver = null;
+
   this.handleErr_ = goog.nullFunction;
 
   this.changeHandler_ = goog.events.listen(this,
@@ -263,11 +265,17 @@ mvc.Model.prototype.reset = function(opt_silent) {
 /**
  * gets the value for an attribute
  *
- * @param {string} key to get value of.
+ * @param {Array|string} key to get value of.
  * @param {*=} opt_default will return if value is undefined.
  * @return {*} the value of the key.
  */
 mvc.Model.prototype.get = function(key, opt_default) {
+  if(goog.isArray(key)) {
+    return goog.array.reduce(key, function(obj, k) {
+      obj[k] = this.get(k, opt_default);
+      return obj;
+    }, {}, this);
+  }
 
   // if a getter is defined in a schema then use that
   if (this.schema_[key] && this.schema_[key].get) {
@@ -281,7 +289,8 @@ mvc.Model.prototype.get = function(key, opt_default) {
         },this));
     return goog.isDef(get) ? get : opt_default;
   }
-  return goog.isDef(this.attr_[key]) ? this.attr_[key] : opt_default;
+  return goog.isDef(this.attr_[/** @type {!string} */(key)]) ?
+      this.attr_[/** @type {!string} */(key)] : opt_default;
 };
 
 
@@ -363,7 +372,8 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
       try {
         if (this.schema_[key] && this.schema_[key].set)
           this.attr_[key] = goog.bind(
-              this.parseSchemaFn_(this.schema_[key].set), this)(val, this);
+              this.parseSchemaFn_(this.schema_[key].set), this)
+                  (val, opt_silent);
         else
           this.attr_[key] = val;
         if(this.schema_[key] && this.schema_[key].cmp) {
@@ -455,6 +465,9 @@ mvc.Model.prototype.alias = function(newName, oldName)  {
     this.schema_[newName] = {};
   this.schema_[newName].get = function(oldName) {
     return oldName;
+  };
+  this.schema_[newName].set = function(val, silent) {
+    this.set(oldName, val, silent);
   };
   this.schema_[newName].require = [oldName];
 };
@@ -611,6 +624,32 @@ mvc.Model.prototype.save = function(opt_callback) {
 
 
 /**
+ * sets up auto save on changes
+ * 
+ * @param {string|Array|Function=} opt_vals values to save on. If none provided
+ * will save on any change, if a string hten save only on that key, if an array
+ * then save on any of those changes, if a function it's the callback for any
+ * change save.
+ * @param {Function=} opt_callback for save complete.
+ * @return {{fire: Function, id: number, unbind: Function}|boolean} save binder
+ */
+mvc.Model.prototype.autosave = function(opt_vals, opt_callback) {
+  if(this.autosaver)
+    return false;
+  if(goog.isFunction(opt_vals)) {
+    opt_callback = opt_vals;
+    opt_vals = undefined;
+  }
+  if(!opt_vals)
+    this.autosaver = this.bindAll(goog.bind(this.save, this, opt_callback));
+  else
+    this.autosaver = 
+      this.bind(opt_vals, goog.bind(this.save, this, opt_callback));
+  return this.autosaver;
+};
+
+
+/**
  * can use this to construct setters. For instance if you would set a value
  * like:
  *   model.set('location:latitude', number);
@@ -703,7 +742,11 @@ mvc.Model.prototype.bind = function(name, fn, opt_handler) {
   this.bound_.push(bind);
   var ret = {
     fire: goog.bind(function() {
-      goog.bind(fn, opt_handler || this)(this.get(name), this);
+      var get = goog.array.map(/** @type {Array} */(name), function(n) {
+        return this.get(n);
+      }, this);
+      get.push(this);
+      fn.apply(opt_handler || this, get);
       return ret;
     }, this),
     id: bind.cid,

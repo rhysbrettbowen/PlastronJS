@@ -19,15 +19,54 @@ goog.require('goog.ui.Component');
  * @extends {goog.ui.Component}
  */
 mvc.Control = function(model) {
-  goog.base(this);
+  mvc.Control.superClass_.constructor.apply(
+      this, goog.array.slice(arguments, 1));
   this.eventHolder_ = {
     listeners: {},
     handlers: {}
   };
   this.modelListeners_ = [];
+  this.autoBinders_ = [];
   this.setModel(model);
+  this.contentElement_ = null;
 };
 goog.inherits(mvc.Control, goog.ui.Component);
+
+
+/**
+ * use this to change what mvc.Control inherits from.
+ * 
+ * @param {Function} base e.g. goog.ui.Control.
+ * @param {Function=} opt_call if you need to instantiate a class other than
+ * mvc.Control that inherits from mvc.Control.
+ * @param {...*} var_args the parameters to pass to the constructor - the first
+ * will probably be an mvc.Model.
+ */
+mvc.Control.create = function(base, opt_call, var_args) {
+  var args = goog.array.slice(arguments, 2);
+  var control = null;
+
+  var proto = {};
+  goog.object.forEach(mvc.Control.prototype, function(val, key, obj) {
+    if (obj.hasOwnProperty(key))
+      proto[key] = val;
+  });
+  goog.inherits(mvc.Control, base);
+  goog.object.extend(mvc.Control.prototype, proto);
+
+  opt_call = opt_call || mvc.Control;
+
+  /** @constructor */
+  var temp = function() {};
+  temp.prototype = opt_call.prototype;
+  control = new temp();
+  opt_call.apply(control, args);
+
+  goog.inherits(mvc.Control, goog.ui.Component);
+  goog.object.extend(mvc.Control.prototype, proto);
+  return control;
+
+};
 
 
 /**
@@ -39,6 +78,21 @@ mvc.Control.Fn = {
   TEXT: goog.dom.setTextContent,
   VAL: function(el, val) {el.value = val;},
   CLASS: goog.dom.classes.add
+};
+
+
+/**
+ * @inheritDoc
+ */
+mvc.Control.prototype.setElementInternal = function(el) {
+  goog.base(this, 'setElementInternal', el);
+  if(!this.contentElement_)
+    this.contentElement_ = el;
+};
+
+
+mvc.Control.prototype.getContentElement = function() {
+  return this.contentElement_ || goog.base(this, 'getContentElement');
 };
 
 
@@ -114,6 +168,8 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
           return ret;
             })) {
       goog.bind(handler.fn, handler.handler)(e);
+      if(handler.stop)
+        e.stopPropagation();
     }
   });
 };
@@ -132,10 +188,11 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
  * a function then it takes the event and returns true if it matches.
  * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
+ * @param {boolean=} opt_stop whether to stop propogation.
  * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.on = function(
-    eventName, fn, opt_className, opt_handler, opt_priority) {
+    eventName, fn, opt_className, opt_handler, opt_priority, opt_stop) {
 
   var capture = ['blur', 'focus'];
 
@@ -165,7 +222,8 @@ mvc.Control.prototype.on = function(
     fn: fn,
     uid: null,
     handler: (opt_handler || this),
-    priority: (opt_priority || 50)
+    priority: (opt_priority || 50),
+    stop: opt_stop
   };
   obj.uid = goog.getUid(obj);
 
@@ -200,18 +258,22 @@ mvc.Control.prototype.on = function(
  * check element against to see if listener function should fire.if it is
  * a function then it takes the event and returns true if it matches.
  * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
- * @param {number=} opt_priority default is 50, lower is more important.
+ * @param {number=} opt_priority default is 20, lower is more important.
+ * @param {boolean=} opt_stop whether to stop propogation.
  * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.once = function(
-    eventName, fn, opt_className, opt_handler, opt_priority) {
+    eventName, fn, opt_className, opt_handler, opt_priority, opt_stop) {
   var uid;
   var onceFn = function() {
     fn.apply(/** @type {Object} */(opt_handler || this),
         Array.prototype.slice.call(arguments));
     uid.off();
   };
-  uid = this.on(eventName, onceFn, opt_className);
+  if(!opt_priority)
+    opt_priority = 20;
+  uid = this.on(
+      eventName, onceFn, opt_className, opt_handler, opt_priority, opt_stop);
   return uid;
 };
 
@@ -225,12 +287,13 @@ mvc.Control.prototype.once = function(
  * a function then it takes the event and returns true if it matches.
  * @param {Object=} opt_handler object to bind 'this' to, otherwise mvc.Control.
  * @param {number=} opt_priority default is 50, lower is more important.
+ * @param {boolean=} opt_stop whether to stop propogation.
  * @return {{fire: Function, id: number, off: Function}} boundEvent object.
  */
 mvc.Control.prototype.click = function(
-    fn, opt_className, opt_handler, opt_priority) {
+    fn, opt_className, opt_handler, opt_priority, opt_stop) {
   return this.on(goog.events.EventType.CLICK,
-      fn, opt_className, opt_handler, opt_priority);
+      fn, opt_className, opt_handler, opt_priority, opt_stop);
 };
 
 
@@ -270,6 +333,186 @@ mvc.Control.prototype.getEls = function(selector) {
   return goog.dom.getElementsByTagNameAndClass(selector.replace(/\s.*/, ''),
       selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
       /** @type {Element} */(this.getElement()));
+};
+
+
+
+
+
+/**
+ * this will refresh the list whenever there is a change
+ * 
+ * @param {function(new:mvc.Control, mvc.Model): undefined} type control to use.
+ * @param {Element=} opt_listEl for the list to be put under.
+ * @param {Function=} opt_callback to be run once done.
+ * @return {{fire: Function, id: number, unbind: Function}} boundEvent object.
+ */
+mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
+  if(opt_listEl)
+    this.contentElement_ = opt_listEl;
+  var fn = function() {
+    var model = this.getModel();
+    var models = model.getModels();
+    var children = this.children_ || [];
+    var childModels = goog.array.map(children, function(child) {
+      return child.getModel();
+    });
+
+    var removed = goog.array.filter(children, function(child) {
+      return !goog.array.contains(models, child.getModel());
+    });
+    if (children.length == 0) {
+      var doc = /** @type {Node} */(document.createDocumentFragment());
+      goog.array.forEach(models, function(model) {
+        var newChild = new type(model);
+        this.addChild(newChild);
+        newChild.createDom();
+        newChild.render(/** @type {Element} */(doc));
+      }, this);
+      goog.dom.append(this.getContentElement(), doc);
+    } else {
+      goog.array.forEach(removed, function(child) {
+        this.removeChild(child, true);
+      }, this);
+      goog.array.forEach(models, function(model, ind) {
+        if(!goog.array.contains(childModels, model)) {
+          var child = new type(model);
+          child.createDom();
+          this.addChildAt(child, ind, true);
+        } else {
+          child = goog.array.find(children, function(c) {
+            return c.getModel() == model;
+          });
+          if (this.getChildAt(ind) != child)
+            this.addChildAt(child, ind);
+        }
+      
+      }, this);
+    }
+    opt_callback && opt_callback.call(this, this.getContentElement());
+  };
+  return this.modelChange(fn).fire();
+};
+
+
+/**
+ * sets up two way binding based on a class selector and template or handle
+ * 
+ * @param {string} selector must be class only for two way binding.
+ * @param {string|Object} handle string for a template in the form:
+ *
+ * {$attribute} with some text and a {$attribute2} second attribute
+ *
+ * otherwise a function that takes in an object. Attributes from the model will
+ * be namespaced under model (to get around advanced optimizations) if you are
+ * using soy then you can get the attribute with {$model['attribute']}.
+ * @return {{fire: Function, id: number, unbind: Function}} boundEvent object.
+ */
+mvc.Control.prototype.autobind = function(selector, handle) {
+  if(goog.isString(handle)) {
+    handle = {
+      template: handle
+    };
+  }
+  if(goog.isString(handle.template)) {
+    var str = handle.template;
+    var req = str.match(/\{\$([^}]*)\}/g) || [];
+    req = goog.array.map(req, function(match) {
+      return match.substring(2, match.length - 1);
+    });
+    handle.template = function(data) {
+        var output = str;
+        goog.object.forEach(data.model, function(val, key) {
+          var regex = new RegExp('\\{\\$' + key + '\\}', 'g');
+          output = output.replace(regex, val);
+        });
+        return output;
+      };
+    handle.reqs = handle.reqs || [];
+    goog.array.extend(handle.reqs, req);
+    goog.array.removeDuplicates(handle.reqs);
+  }
+  handle.noClick = handle.noClick || false;
+  var blurs = [];
+  if(selector.replace('-', '.').charAt(0) == '.') {
+
+    blurs.push(this.on(goog.events.EventType.BLUR, function(e) {
+        if(e.target.tagName == 'INPUT' &&
+            e.target.getAttribute('type') == 'text')
+          this.getModel().set(e.target.value);
+        else if(e.target.tagName == 'SELECT') {
+          this.getModel().set(e.target.options[e.target.selectedIndex].value);
+        }
+      }, selector.substring(1)));
+    if(!handle.noClick) {
+      blurs.push(this.click(function(e) {
+        if(handle.onClass) {
+          this.getModel().set(handle.reqs[0],
+              !goog.dom.classes.has(e.target, handle.onClass));
+          e.stopPropagation();
+        } else if(e.target.tagName == 'INPUT' &&
+            e.target.getAttribute('type') == 'checkbox') {
+          this.getModel().set(handle.reqs[0], e.target.checked);
+          e.stopPropagation();
+        }
+      },  selector.substring(1), this, 30));
+    }
+  }
+  
+  if(!goog.isArray(handle.reqs))
+    handle.reqs = [handle.reqs];
+  var setHTML = function() {
+    if(handle.template) {
+      var data = {};
+      if(handle.data) {
+        goog.object.forEach(handle.data, function(val, key) {
+          data[key] = goog.isFunction(val) ? val(this) : key;
+        }, this);
+      }
+      data.model = this.getModel().get(handle.reqs);
+      var html = handle.template(data);
+      goog.array.forEach(this.getEls(selector), function(el) {
+        if (el.tagName == 'INPUT' && el.getAttribute('type') != 'checkbox') {
+          if (el.value != html) {
+            el.value = html;
+          }
+        } else if (el.tagName == 'SELECT') {
+          goog.array.forEach(el.options, function(opt) {
+            opt.selected = (opt.value == html)
+          });
+        } else {
+          goog.dom.removeChildren(el);
+          goog.dom.append(el, goog.dom.htmlToDocumentFragment(html));
+        }
+      }, this);
+    }
+    goog.array.forEach(this.getEls(selector), function(el) {
+      if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
+        el.checked = this.getModel().get(handle.reqs[0]);
+      } 
+    }, this);
+    if (handle.onClass) {
+      var args = goog.array.slice(arguments, 0);
+      var on = arguments[0];
+      goog.array.forEach(this.getEls(selector), function(el) {
+          goog.dom.classes.enable(el, handle.onClass, on);
+          if(handle.offClass)
+            goog.dom.classes.enable(el, handle.offClass, !on);
+      });
+    }
+  };
+  var bound = this.bind(handle.reqs, setHTML).fire();
+  var ret = {
+    id: goog.getUid(blurs),
+    blurs: blurs,
+    bound: bound,
+    fire: bound.fire,
+    unbind: goog.bind(function() {
+      this.unbind(goog.getUid(blurs));
+    }, this)
+  };
+  this.autoBinders_.push(ret);
+  return ret;
 };
 
 
@@ -486,13 +729,20 @@ mvc.Control.prototype.modelChange_ = function(fn, opt_handler) {
  * @return {boolean} if found and removed.
  */
 mvc.Control.prototype.unbind = function(id) {
-  if (goog.isObject(id))
-    id = id;
   goog.array.removeIf(this.modelListeners_, function(listener) {
     if (goog.isObject(listener))
       listener = listener.id;
-    return listener == id;
+    return listener == (id.id || id);
   });
+  var auto = goog.array.find(this.autoBinders_, function(bound) {
+    return bound.id == (id.id || id);
+  });
+  if(auto) {
+    goog.array.forEach(auto.blurs, function(blur) {
+      this.off(blur);
+    }, this);
+    id = auto.bound;
+  }
   return this.unbind_(id);
 };
 
