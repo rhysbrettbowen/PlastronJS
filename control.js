@@ -317,10 +317,18 @@ mvc.Control.prototype.off = function(uid) {
  * pass in a string like "#elementId", ".className" or "tagName[ .className]"
  * to get array of elements with the id, class or tag and class name
  *
- * @param {string} selector string to use to find elements.
+ * @param {string|Array} selector string to use to find elements.
  * @return {?goog.array.ArrayLike} elements found.
  */
 mvc.Control.prototype.getEls = function(selector) {
+  if (!selector)
+    return [this.getElement()];
+  if(goog.isArray(selector)) {
+    var arr = goog.array.flatten(
+        goog.array.map(selector, this.getEls, this));
+    goog.array.removeDuplicates(arr);
+    return arr;
+  }
   if (selector.charAt(0) == '-')
     selector = '.' + selector.substring(1);
   if (selector.charAt(0) == '.') {
@@ -328,11 +336,12 @@ mvc.Control.prototype.getEls = function(selector) {
         /** @type {Element} */(this.getElement())) || [];
   }
   if (selector.charAt(0) == '#') {
-    return [goog.dom.getElement(selector)];
+    return [goog.dom.getElement(selector.substring(1))];
   }
-  return goog.dom.getElementsByTagNameAndClass(selector.replace(/\s.*/, ''),
-      selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
-      /** @type {Element} */(this.getElement()));
+  return goog.array.slice(
+      goog.dom.getElementsByTagNameAndClass(selector.replace(/\s.*/, ''),
+          selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
+          /** @type {Element} */(this.getElement())), 0);
 };
 
 
@@ -398,7 +407,7 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
 /**
  * sets up two way binding based on a class selector and template or handle
  * 
- * @param {string} selector must be class only for two way binding.
+ * @param {string|Array} selector must be class only for two way binding.
  * @param {string|Object} handle string for a template in the form:
  *
  * {$attribute} with some text and a {$attribute2} second attribute
@@ -432,16 +441,36 @@ mvc.Control.prototype.autobind = function(selector, handle) {
     goog.array.extend(handle.reqs, req);
     goog.array.removeDuplicates(handle.reqs);
   }
+  if (handle.reqClass) {
+    if (!handle.chooseClass) {
+      handle.chooseClass = function(value) {
+        return value;
+      };
+    }
+    if (!goog.isArray(handle.reqClass)) {
+      handle.reqClass = [handle.reqClass];
+    }
+  }
+  if (handle.show) {
+    if (!handle.reqs)
+      handle.reqs = [];
+    if(goog.isString(handle.show))
+      goog.array.insertAt(handle.reqs, handle.show, 0);
+  }
   handle.noClick = handle.noClick || false;
+  if(!goog.isArray(handle.reqs))
+    handle.reqs = [handle.reqs];
   var blurs = [];
-  if(selector.replace('-', '.').charAt(0) == '.') {
+  if(!goog.isArray(selector) && 
+      selector.replace('-', '.').charAt(0) == '.') {
 
     blurs.push(this.on(goog.events.EventType.BLUR, function(e) {
         if(e.target.tagName == 'INPUT' &&
             e.target.getAttribute('type') == 'text')
-          this.getModel().set(e.target.value);
+          this.getModel().set(handle.reqs[0], e.target.value);
         else if(e.target.tagName == 'SELECT') {
-          this.getModel().set(e.target.options[e.target.selectedIndex].value);
+          this.getModel().set(handle.reqs[0],
+              e.target.options[e.target.selectedIndex].value);
         }
       }, selector.substring(1)));
     if(!handle.noClick) {
@@ -459,9 +488,10 @@ mvc.Control.prototype.autobind = function(selector, handle) {
     }
   }
   
-  if(!goog.isArray(handle.reqs))
-    handle.reqs = [handle.reqs];
+
   var setHTML = function() {
+    var args = goog.array.slice(arguments, 0);
+    var first = args[0];
     if(handle.template) {
       var data = {};
       if(handle.data) {
@@ -492,14 +522,25 @@ mvc.Control.prototype.autobind = function(selector, handle) {
       } 
     }, this);
     if (handle.onClass) {
-      var args = goog.array.slice(arguments, 0);
-      var on = arguments[0];
       goog.array.forEach(this.getEls(selector), function(el) {
-          goog.dom.classes.enable(el, handle.onClass, on);
+          goog.dom.classes.enable(el, handle.onClass, first);
           if(handle.offClass)
-            goog.dom.classes.enable(el, handle.offClass, !on);
+            goog.dom.classes.enable(el, handle.offClass, !first);
       });
     }
+    if (handle.reqClass) {
+      goog.array.forEach(this.getEls(selector), function(el) {
+          goog.array.forEach(handle.reqClass, function(className) {
+            goog.dom.classes.enable(el, className,
+              className == handle.chooseClass(first));
+          }, this);
+      }, this);
+    }
+    if (handle.show) {
+      goog.array.forEach(this.getEls(selector), function(el) {
+        goog.style.showElement(el, first);
+      });
+    };
   };
   var bound = this.bind(handle.reqs, setHTML).fire();
   var ret = {

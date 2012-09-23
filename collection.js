@@ -336,10 +336,16 @@ mvc.Collection.prototype.getById = function(id) {
 /**
  * get all the models, optionally filter by function
  *
- * @param {function(mvc.Model):Boolean=} opt_filter function to use.
+ * @param {string|function(mvc.Model):Boolean=} opt_filter function to use.
  * @return {Array.<mvc.Model>} cloned array of the collections models.
  */
 mvc.Collection.prototype.getModels = function(opt_filter) {
+  if(goog.isString(opt_filter)) {
+    var str = opt_filter;
+    opt_filter = function(model) {
+      return model.get(str);
+    };
+  }
   var mods = goog.array.map(this.models_, function(mod) {
     return mod.model;
   });

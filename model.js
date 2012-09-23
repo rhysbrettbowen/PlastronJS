@@ -376,8 +376,11 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
                   (val, opt_silent);
         else
           this.attr_[key] = val;
-        if(this.schema_[key] && this.schema_[key].cmp) {
-          if(!this.schema_[key].cmp(this.get(key), this.prev(key))) {
+        var schema = this.schema_[key];
+        if(goog.isDef(schema) && goog.isFunction(schema.cmp)) {
+          var cmp = schema.cmp;
+          if(goog.isFunction(cmp) && 
+              !cmp(this.get(key), this.prev(key))) {
             success = true;
           }
         } else if(this.get(key) !== this.prev(key)) {
