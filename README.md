@@ -726,6 +726,18 @@ goog.inherits(app.MyControl, mvc.Control);
 
 ### changelog ###
 
+### v1.0.3 beta ###
+
+#### Warning api change ####
+on mvc.Control, instead of taking a className for it's event handlers (on, once & click) it now takes a selector. To adjust for this just put a '.' or '-' in front of the className. If you are using class compilation you can change your class like so:
+goog.getCssName('myclass') -> goog.getCssName('-myclass');
+
+- two way binding working for text input
+- two way binding can take multiple classes
+- getEls can take an array of selectors
+- can pass in falsey value to getEls for the top element
+- more autobind options
+
 ### v1.0.2 beta ###
 
 - autosave models

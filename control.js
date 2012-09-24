@@ -158,20 +158,21 @@ mvc.Control.prototype.handleEvents_ = function(type, e) {
 
     // if no selector or matches selector then fire
     if (!handler.selectors.length ||
-            goog.array.some(handler.selectors, function(className) {
-          if (goog.isFunction(className))
-            return className(e);
-          var ret =  goog.dom.getAncestorByClass(
-                  /** @type {Node} */(e.target), className);
+            goog.array.some(handler.selectors, function(selector) {
+          if (goog.isFunction(selector))
+            return selector(e);
+          var ret =  goog.array.find(this.getEls(selector), function(el) {
+            return goog.dom.contains(el, /** @type {Node} */(e.target));
+          });
           if (ret)
-            e.target = ret;
+            e.target = /** @type {EventTarget} */(ret);
           return ret;
-            })) {
+            }, this)) {
       goog.bind(handler.fn, handler.handler)(e);
       if(handler.stop)
         e.stopPropagation();
     }
-  });
+  }, this);
 };
 
 
@@ -318,11 +319,13 @@ mvc.Control.prototype.off = function(uid) {
  * to get array of elements with the id, class or tag and class name
  *
  * @param {string|Array} selector string to use to find elements.
+ * @param {Node=} opt_parent optional parent else the control's element.
  * @return {?goog.array.ArrayLike} elements found.
  */
-mvc.Control.prototype.getEls = function(selector) {
+mvc.Control.prototype.getEls = function(selector, opt_parent) {
+  opt_parent = opt_parent || this.getElement();
   if (!selector)
-    return [this.getElement()];
+    return [opt_parent];
   if(goog.isArray(selector)) {
     var arr = goog.array.flatten(
         goog.array.map(selector, this.getEls, this));
@@ -333,7 +336,7 @@ mvc.Control.prototype.getEls = function(selector) {
     selector = '.' + selector.substring(1);
   if (selector.charAt(0) == '.') {
     return goog.dom.getElementsByClass(selector.substring(1),
-        /** @type {Element} */(this.getElement())) || [];
+        /** @type {Element} */(opt_parent)) || [];
   }
   if (selector.charAt(0) == '#') {
     return [goog.dom.getElement(selector.substring(1))];
@@ -341,11 +344,8 @@ mvc.Control.prototype.getEls = function(selector) {
   return goog.array.slice(
       goog.dom.getElementsByTagNameAndClass(selector.replace(/\s.*/, ''),
           selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
-          /** @type {Element} */(this.getElement())), 0);
+          /** @type {Element} */(opt_parent)), 0);
 };
-
-
-
 
 
 /**
@@ -415,6 +415,14 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
  * otherwise a function that takes in an object. Attributes from the model will
  * be namespaced under model (to get around advanced optimizations) if you are
  * using soy then you can get the attribute with {$model['attribute']}.
+ * You can create a button like object by passing in an onClass and offClass
+ * that will toggle those classes and a models boolean attribute on click.
+ * Also you can pass in reqClass to toggle between several classes based on a
+ * value with chooseClass being the function thatcan convert the first required
+ * attribute to the class value in reqClass or no function if the values match.
+ * Pass in noClick and/or noBlur as true to disable the click or blur binding.
+ * Pass in show as the attribute to show or hide on a truthy value or just as
+ * true to use the first attribute in reqs.
  * @return {{fire: Function, id: number, unbind: Function}} boundEvent object.
  */
 mvc.Control.prototype.autobind = function(selector, handle) {
@@ -461,31 +469,29 @@ mvc.Control.prototype.autobind = function(selector, handle) {
   if(!goog.isArray(handle.reqs))
     handle.reqs = [handle.reqs];
   var blurs = [];
-  if(!goog.isArray(selector) && 
-      selector.replace('-', '.').charAt(0) == '.') {
-
+  if (!goog.isDef(handle.noBlur)) {
     blurs.push(this.on(goog.events.EventType.BLUR, function(e) {
-        if(e.target.tagName == 'INPUT' &&
-            e.target.getAttribute('type') == 'text')
-          this.getModel().set(handle.reqs[0], e.target.value);
-        else if(e.target.tagName == 'SELECT') {
-          this.getModel().set(handle.reqs[0],
-              e.target.options[e.target.selectedIndex].value);
-        }
-      }, selector.substring(1)));
-    if(!handle.noClick) {
-      blurs.push(this.click(function(e) {
-        if(handle.onClass) {
-          this.getModel().set(handle.reqs[0],
-              !goog.dom.classes.has(e.target, handle.onClass));
-          e.stopPropagation();
-        } else if(e.target.tagName == 'INPUT' &&
-            e.target.getAttribute('type') == 'checkbox') {
-          this.getModel().set(handle.reqs[0], e.target.checked);
-          e.stopPropagation();
-        }
-      },  selector.substring(1), this, 30));
-    }
+      if(e.target.tagName == 'INPUT' &&
+          e.target.getAttribute('type') == 'text')
+        this.getModel().set(handle.reqs[0], e.target.value);
+      else if(e.target.tagName == 'SELECT') {
+        this.getModel().set(handle.reqs[0],
+            e.target.options[e.target.selectedIndex].value);
+      }
+    }, selector));
+  }
+  if (!goog.isDef(handle.noClick)) {
+    blurs.push(this.click(function(e) {
+      if(handle.onClass) {
+        this.getModel().set(handle.reqs[0],
+            !goog.dom.classes.has(e.target, handle.onClass));
+        e.stopPropagation();
+      } else if(e.target.tagName == 'INPUT' &&
+          e.target.getAttribute('type') == 'checkbox') {
+        this.getModel().set(handle.reqs[0], e.target.checked);
+        e.stopPropagation();
+      }
+    }, selector, this, 30));
   }
   
 
