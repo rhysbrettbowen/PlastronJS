@@ -1,6 +1,10 @@
 # PlastronJS #
 formerly goog.mvc
 
+#### API change ####
+
+if you've been using the mvc.Control methods on, once or click then there is a change for the second parameter which now takes a selector rather than a class name. This should be changed by adding a '.' or a '-' at the start. If you a compiling class names the it should look like this: goog.getCssName('-myclass')
+
 I've given the project v1 beta status which means that it's mostly tested but not used in production yet and the existing API is unlikely to change (if it does I'll provide backwards compatability until v2 - if one is ever made, I have some plans for future revisions) and any new additions wil get a .x version number. And bug fixes will get a .x.X version number.
 
 I'm using it as the foundation of Catch.com's new webclient which will be much shinier and more interactive than possible with the old codebase and will move the project to release once the new site is in production (later in 2012).
@@ -433,10 +437,10 @@ But what if you want to listen for a click on a particular element?
 
 ### delegating events ###
 
-You can decide whether or not to fire a handler by either the className of the element (or an array of classNames if it can fire or any of them) or a function that takes the event and returns true if it should be handled. for instance:
+You can decide whether or not to fire a handler by either the a selector that matches the element or a function that takes the event and returns true if it should be handled. for instance:
 
 ```javascript
-this.click(function(){alert('click')}, ["star", "unstar"]);
+this.click(function(){alert('click')}, [".star", ".unstar"]);
 ```
 
 will fire for any element that has the class star or unstar. If you want to fine tune it more you could use a function:
@@ -474,7 +478,7 @@ above the arguments in the last click call are the function, the decider functio
 
 ### unhandling ###
 
-you can use the off method like I have above to unbind any handlers just like unbind in models.
+you can use the off method like above to unbind any handlers just like unbind in models.
 
 ### handling notes ###
 
@@ -493,7 +497,7 @@ The best place to setup bindings is in the controls enterDocument method. for in
 ```javascript
 this.click(function(e) {
   this.getModel().set('star', !this.getModel().get('star'));
-  }, "starButton");
+  }, ".starButton");
 this.getModel().bind('star', function(star) {
   if(star)
     goog.dom.classes.add(this.getEls(".starButton")[0], 'star');
@@ -506,7 +510,7 @@ now clicking on the star button will change the star attribute and that will in 
 
 ### bind to a model ###
 
-you caninstead of doing this:
+instead of doing this:
 
 ```javascript
 this.getModel().bind('star', myFunc, this);
