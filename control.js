@@ -521,9 +521,10 @@ mvc.Control.prototype.autobind = function(selector, handle) {
         el.checked = this.getModel().get(handle.reqs[0]);
       } 
     }, this);
-    if (handle.onClass) {
+    if (goog.isDef(handle.onClass)) {
+      var onClass = handle.onClass;
       goog.array.forEach(this.getEls(selector), function(el) {
-          goog.dom.classes.enable(el, handle.onClass, first);
+          goog.dom.classes.enable(el, onClass, first);
           if(handle.offClass)
             goog.dom.classes.enable(el, handle.offClass, !first);
       });
