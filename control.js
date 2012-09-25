@@ -342,7 +342,8 @@ mvc.Control.prototype.getEls = function(selector, opt_parent) {
     return [goog.dom.getElement(selector.substring(1))];
   }
   return goog.array.slice(
-      goog.dom.getElementsByTagNameAndClass(selector.replace(/\s.*/, ''),
+      goog.dom.getElementsByTagNameAndClass(goog.string.trim(
+          selector.replace(/\..*/, '')),
           selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
           /** @type {Element} */(opt_parent)), 0);
 };
@@ -465,7 +466,6 @@ mvc.Control.prototype.autobind = function(selector, handle) {
     if(goog.isString(handle.show))
       goog.array.insertAt(handle.reqs, handle.show, 0);
   }
-  handle.noClick = handle.noClick || false;
   if(!goog.isArray(handle.reqs))
     handle.reqs = [handle.reqs];
   var blurs = [];
