@@ -372,14 +372,10 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
       return !goog.array.contains(models, child.getModel());
     });
     if (children.length == 0) {
-      var doc = /** @type {Node} */(document.createDocumentFragment());
       goog.array.forEach(models, function(model) {
         var newChild = new type(model);
-        this.addChild(newChild);
-        newChild.createDom();
-        newChild.render(/** @type {Element} */(doc));
+        this.addChild(newChild, true);
       }, this);
-      goog.dom.append(this.getContentElement(), doc);
     } else {
       goog.array.forEach(removed, function(child) {
         this.removeChild(child, true);
@@ -424,13 +420,20 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
  * Pass in noClick and/or noBlur as true to disable the click or blur binding.
  * Pass in show as the attribute to show or hide on a truthy value or just as
  * true to use the first attribute in reqs.
+ * @param {boolean=} opt_fire don't hook up the setting of attributes.
  * @return {{fire: Function, id: number, unbind: Function}} boundEvent object.
  */
-mvc.Control.prototype.autobind = function(selector, handle) {
+mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
   if(goog.isString(handle)) {
     handle = {
       template: handle
     };
+  }
+  if(opt_fire) {
+    goog.object.extend(handle, {
+      noClick: true,
+      noBlur: true
+    });
   }
   if(goog.isString(handle.template)) {
     var str = handle.template;
@@ -546,6 +549,16 @@ mvc.Control.prototype.autobind = function(selector, handle) {
     if (handle.show) {
       goog.array.forEach(this.getEls(selector), function(el) {
         goog.style.showElement(el, first);
+      });
+    };
+    if (handle.attr) {
+      var obj = {};
+      obj[handle.attr] = this.getModel().get(handle.reqs[0]);
+      goog.array.forEach(this.getEls(selector), function(el) {
+        if(goog.isDef(obj[handle.attr]))
+          goog.dom.setProperties(el, obj);
+        else
+          el.removeAttribute(handle.attr);
       });
     };
   };
@@ -762,7 +775,7 @@ mvc.Control.prototype.modelChange = function(fn, opt_handler) {
  *
  * @private
  * @param {Function} fn function to run on model change.
- * @param {Object=} opt_handler to set 'this' of function.
+ * @param {Object=} opt_handler to set 'this' of function
  * @return {{fire: Function, id: number, unbind: Function}} bind object.
  */
 mvc.Control.prototype.modelChange_ = function(fn, opt_handler) {
