@@ -341,11 +341,11 @@ mvc.Control.prototype.getEls = function(selector, opt_parent) {
   if (selector.charAt(0) == '#') {
     return [goog.dom.getElement(selector.substring(1))];
   }
-  return goog.array.slice(
+  return goog.array.clone(
       goog.dom.getElementsByTagNameAndClass(goog.string.trim(
           selector.replace(/\..*/, '')),
           selector.indexOf('.') > 0 ? selector.replace(/.*\./, '') : null,
-          /** @type {Element} */(opt_parent)), 0);
+          /** @type {Element} */(opt_parent)));
 };
 
 
@@ -459,7 +459,7 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
         return value;
       };
     }
-    if (!goog.isArray(handle.reqClass)) {
+    if (goog.isString(handle.reqClass)) {
       handle.reqClass = [handle.reqClass];
     }
   }
@@ -539,12 +539,20 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
       });
     }
     if (handle.reqClass) {
-      goog.array.forEach(this.getEls(selector), function(el) {
-          goog.array.forEach(handle.reqClass, function(className) {
-            goog.dom.classes.enable(el, className,
-              className == handle.chooseClass(first));
-          }, this);
-      }, this);
+      if (goog.isArray(handle.reqClass))
+        goog.array.forEach(this.getEls(selector), function(el) {
+            goog.array.forEach(handle.reqClass, function(className) {
+              goog.dom.classes.enable(el, className,
+                className == handle.chooseClass(first));
+            }, this);
+        }, this);
+      else
+        goog.array.forEach(this.getEls(selector), function(el) {
+            goog.object.forEach(handle.reqClass, function(val, key) {
+              goog.dom.classes.enable(el, val,
+                key == handle.chooseClass(first));
+            }, this);
+        }, this);
     }
     if (handle.show) {
       goog.array.forEach(this.getEls(selector), function(el) {
