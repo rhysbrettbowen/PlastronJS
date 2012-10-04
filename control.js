@@ -29,6 +29,7 @@ mvc.Control = function(model) {
   this.autoBinders_ = [];
   this.setModel(model);
   this.contentElement_ = null;
+  this.placeChild_ = null;
 };
 goog.inherits(mvc.Control, goog.ui.Component);
 
@@ -466,8 +467,11 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
   if (handle.show) {
     if (!handle.reqs)
       handle.reqs = [];
-    if(goog.isString(handle.show))
+    if(goog.isString(handle.show)) {
       goog.array.insertAt(handle.reqs, handle.show, 0);
+    }
+    if(!goog.isFunction(handle.show))
+      handle.show = function(show) {return show;};
   }
   if(!goog.isArray(handle.reqs))
     handle.reqs = [handle.reqs];
@@ -556,7 +560,7 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
     }
     if (handle.show) {
       goog.array.forEach(this.getEls(selector), function(el) {
-        goog.style.showElement(el, first);
+        goog.style.showElement(el, handle.show(first));
       });
     };
     if (handle.attr) {
@@ -829,6 +833,7 @@ mvc.Control.prototype.unbind_ = function(id) {
   return this.getModel().unbind(id);
 };
 
+
 /**
  * @inheritDoc
  */
@@ -839,4 +844,80 @@ mvc.Control.prototype.disposeInternal = function() {
   this.eventHolder_ = null;
   goog.base(this, 'disposeInternal');
 };
+
+
+/**
+ * @inheritDoc
+ */
+mvc.Control.prototype.addChildAt = function(
+    child, index, opt_render) {
+  if (goog.userAgent.IE && !goog.userAgent.isVersion(9)) {
+    goog.base(this, 'addChildAt', child, index, opt_render);
+    return;
+  }
+  if (child.inDocument_ && (opt_render || !this.inDocument_)) {
+    throw Error(goog.ui.Component.Error.ALREADY_RENDERED);
+  }
+
+  if (index < 0 || index > this.getChildCount()) {
+    throw Error(goog.ui.Component.Error.CHILD_INDEX_OUT_OF_BOUNDS);
+  }
+
+  if (!this.childIndex_ || !this.children_) {
+    this.childIndex_ = {};
+    this.children_ = [];
+  }
+
+  if (child.getParent() == this) {
+    goog.object.set(this.childIndex_, child.getId(), child);
+    goog.array.remove(this.children_, child);
+
+  } else {
+    goog.object.add(this.childIndex_, child.getId(), child);
+  }
+
+  child.setParent(this);
+  goog.array.insertAt(this.children_, child, index);
+
+  if (opt_render &&
+      (!child.inDocument || !this.inDocument || child.getParent != this)) {
+    if (!this.element_) {
+      this.createDom();
+    }
+    var sibling = this.getChildAt(index + 1);
+    child.render_(this.getContentElement(), sibling ? sibling.element_ : null);
+  }
+
+  if (child.inDocument_ && this.inDocument_ && child.getParent() == this) {
+    var contentElement = this.getContentElement();
+    if (!this.placeChild_)
+      contentElement.insertBefore(child.getElement(),
+         (contentElement.childNodes[index] || null));
+    else
+      goog.array.forEach(this.children_, function(child, index) {
+        this.placeChild_(contentElement, child, index);
+      }, this);
+
+
+
+  } else if (!opt_render && this.inDocument_ && !child.inDocument_ &&
+      child.element_ && child.element_.parentNode) {
+    child.enterDocument();
+  }
+};
+
+
+/**
+ * @inheritDoc
+ */
+mvc.Control.prototype.removeChild = function(
+    child, opt_unrender) {
+  var ret = goog.base(this, 'removeChild', child, opt_unrender);
+  if (this.placeChild_)
+    goog.array.forEach(this.children_, function(child, index) {
+      this.placeChild_(this.getContentElement(), child, index);
+    }, this);
+  return ret;
+};
+
 
