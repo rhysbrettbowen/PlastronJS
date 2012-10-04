@@ -144,13 +144,12 @@ mvc.Mediator.prototype.canFire_ = function(key, message) {
   return goog.array.every(messageArr, function(part, ind) {
     if(!keyArr[ind])
       return true;
-    if(part.match(new RegExp(
+    var regex = new RegExp(
         '^' + goog.string.regExpEscape(keyArr[ind])
-            .replace(this.wildlvlRegex_, '.*') + '$'), 'i'))
+            .replace(this.wildlvlRegex_, '.*') + '$', 'i')
+    if(part.match(regex))
       return true;
-    else if (wildInd > -1 && part.match(new RegExp(
-        '^' + goog.string.regExpEscape(keyArr[ind])
-            .replace(this.wildlvlRegex_, '.*')), 'i'))
+    else if (wildInd > -1 && part.match(regex))
       return true;
     return false;
   }, this);

@@ -98,7 +98,7 @@ mvc.Control.prototype.getContentElement = function() {
 
 
 /**
- * @param {mvc.Model} model to set the model to.
+ * @param {*} model to set the model to.
  * @param {boolean=} opt_dontFire whether to suppress firing all change events.
  */
 mvc.Control.prototype.setModel = function(model, opt_dontFire) {
@@ -329,7 +329,9 @@ mvc.Control.prototype.getEls = function(selector, opt_parent) {
     return [opt_parent];
   if(goog.isArray(selector)) {
     var arr = goog.array.flatten(
-        goog.array.map(selector, this.getEls, this));
+        goog.array.map(selector, function(select) {
+          return this.getEls(select);
+        }, this));
     goog.array.removeDuplicates(arr);
     return arr;
   }
