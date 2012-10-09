@@ -818,6 +818,7 @@ mvc.Control.prototype.unbind = function(id) {
     }, this);
     id = auto.bound;
   }
+  goog.array.remove(this.autoBinders_, auto);
   return this.unbind_(id);
 };
 
@@ -840,10 +841,13 @@ mvc.Control.prototype.unbind_ = function(id) {
  * @inheritDoc
  */
 mvc.Control.prototype.disposeInternal = function() {
-  goog.array.forEach(this.modelListeners_, function(id) {
+  goog.array.forEach(goog.array.clone(this.modelListeners_), function(id) {
     id.unbind();
   }, this);
   this.eventHolder_ = null;
+  goog.array.forEach(goog.array.clone(this.autoBinders_), function(bound) {
+    bound.unbind();
+  });
   goog.base(this, 'disposeInternal');
 };
 
