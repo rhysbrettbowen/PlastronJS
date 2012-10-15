@@ -235,7 +235,12 @@ mvc.Model.create = function(opt_options) {
  * @return {!Object} the model as a json - this should probably be overridden.
  */
 mvc.Model.prototype.toJson = function() {
-  return goog.object.clone(this.attr_);
+  var json = goog.object.clone(this.attr_);
+  goog.array.forEach(goog.object.getKeys(json), function(key) {
+    if (!goog.isDef(json[key]))
+      delete json[key];
+  });
+  return json;
 };
 
 
@@ -255,8 +260,10 @@ mvc.Model.prototype.setSync = function(sync) {
  * @param {boolean=} opt_silent whether to fire change event.
  */
 mvc.Model.prototype.reset = function(opt_silent) {
-  this.prev_ = this.attr_;
-  this.attr_ = {};
+  this.prev_ = /** @type {Object} */(goog.object.unsafeClone(this.attr_));
+  goog.array.forEach(goog.object.getKeys(this.prev_), function(key) {
+    this.set(key, undefined, true);
+  }, this);
   if (!opt_silent)
     this.change();
 };
@@ -667,9 +674,9 @@ mvc.Model.prototype.autosave = function(opt_vals, opt_callback) {
  * or nothing to get the key's value.
  */
 mvc.Model.prototype.getBinder = function(key) {
-  return goog.bind(function(val) {
+  return goog.bind(function(val, opt_silent) {
     if (goog.isDef(val)) {
-      this.set(key, val);
+      this.set(key, val, opt_silent);
     } else {
       return this.get(key);
     }
@@ -695,6 +702,8 @@ mvc.Model.prototype.change_ = function() {
           },this)));
     }
   }, this);
+  if (!changes.length)
+    return;
   goog.object.forEach(this.boundAll_, function(val) {
     val(this);
   }, this);
