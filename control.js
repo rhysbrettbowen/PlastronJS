@@ -404,6 +404,85 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
 };
 
 
+mvc.Control.prototype.autobindChange_ = function(handle, selector) {
+  var args = goog.array.slice(arguments, 2);
+  var first = args[0];
+  if(handle.template) {
+    var data = {};
+    if(handle.data) {
+      goog.object.forEach(handle.data, function(val, key) {
+        data[key] = goog.isFunction(val) ? val(this) : key;
+      }, this);
+    }
+    data.model = this.getModel().get(handle.reqs);
+    var html = handle.template(data);
+    goog.array.forEach(this.getEls(selector), function(el) {
+      if (el.tagName == 'INPUT' && el.getAttribute('type') != 'checkbox') {
+        if (el.value != html) {
+          el.value = html;
+        }
+      } else if (el.tagName == 'SELECT') {
+        goog.array.forEach(el.options, function(opt) {
+          opt.selected = (opt.value == html)
+        });
+      } else {
+        goog.dom.removeChildren(el);
+        goog.dom.append(el, goog.dom.htmlToDocumentFragment(html));
+      }
+    }, this);
+  }
+  goog.array.forEach(this.getEls(selector), function(el) {
+    if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
+      el.checked = this.getModel().get(handle.reqs[0]);
+    } 
+  }, this);
+  if (goog.isDef(handle.onClass)) {
+    var onClass = handle.onClass;
+    goog.array.forEach(this.getEls(selector), function(el) {
+        goog.dom.classes.enable(el, onClass, first);
+        if(handle.offClass)
+          goog.dom.classes.enable(el, handle.offClass, !first);
+    });
+  }
+  if (handle.reqClass) {
+    if (goog.isArray(handle.reqClass))
+      goog.array.forEach(this.getEls(selector), function(el) {
+          goog.array.forEach(handle.reqClass, function(className) {
+            goog.dom.classes.enable(el, className,
+              className == handle.chooseClass(first));
+          }, this);
+      }, this);
+    else
+      goog.array.forEach(this.getEls(selector), function(el) {
+          goog.object.forEach(handle.reqClass, function(val, key) {
+            goog.dom.classes.enable(el, val,
+              key == handle.chooseClass(first));
+          }, this);
+      }, this);
+  }
+  if (handle.show) {
+    goog.array.forEach(this.getEls(selector), function(el) {
+      goog.style.showElement(el, handle.show(first));
+    });
+  };
+  if (handle.attr) {
+    var obj = {};
+    obj[handle.attr] = this.getModel().get(handle.reqs[0]);
+    goog.array.forEach(this.getEls(selector), function(el) {
+      if(goog.isDef(obj[handle.attr]))
+        goog.dom.setProperties(el, obj);
+      else
+        el.removeAttribute(handle.attr);
+    });
+  };
+  if (handle.then) {
+    handle.then.apply(this, goog.array.map(handle.reqs, function(key) {
+      return this.getModel().get('key');
+    }, this));
+  }
+};
+
+
 /**
  * sets up two way binding based on a class selector and template or handle
  * 
@@ -503,78 +582,10 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
     }, selector, this, 30));
   }
   
-
+  var that = this;
   var setHTML = function() {
-    var args = goog.array.slice(arguments, 0);
-    var first = args[0];
-    if(handle.template) {
-      var data = {};
-      if(handle.data) {
-        goog.object.forEach(handle.data, function(val, key) {
-          data[key] = goog.isFunction(val) ? val(this) : key;
-        }, this);
-      }
-      data.model = this.getModel().get(handle.reqs);
-      var html = handle.template(data);
-      goog.array.forEach(this.getEls(selector), function(el) {
-        if (el.tagName == 'INPUT' && el.getAttribute('type') != 'checkbox') {
-          if (el.value != html) {
-            el.value = html;
-          }
-        } else if (el.tagName == 'SELECT') {
-          goog.array.forEach(el.options, function(opt) {
-            opt.selected = (opt.value == html)
-          });
-        } else {
-          goog.dom.removeChildren(el);
-          goog.dom.append(el, goog.dom.htmlToDocumentFragment(html));
-        }
-      }, this);
-    }
-    goog.array.forEach(this.getEls(selector), function(el) {
-      if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
-        el.checked = this.getModel().get(handle.reqs[0]);
-      } 
-    }, this);
-    if (goog.isDef(handle.onClass)) {
-      var onClass = handle.onClass;
-      goog.array.forEach(this.getEls(selector), function(el) {
-          goog.dom.classes.enable(el, onClass, first);
-          if(handle.offClass)
-            goog.dom.classes.enable(el, handle.offClass, !first);
-      });
-    }
-    if (handle.reqClass) {
-      if (goog.isArray(handle.reqClass))
-        goog.array.forEach(this.getEls(selector), function(el) {
-            goog.array.forEach(handle.reqClass, function(className) {
-              goog.dom.classes.enable(el, className,
-                className == handle.chooseClass(first));
-            }, this);
-        }, this);
-      else
-        goog.array.forEach(this.getEls(selector), function(el) {
-            goog.object.forEach(handle.reqClass, function(val, key) {
-              goog.dom.classes.enable(el, val,
-                key == handle.chooseClass(first));
-            }, this);
-        }, this);
-    }
-    if (handle.show) {
-      goog.array.forEach(this.getEls(selector), function(el) {
-        goog.style.showElement(el, handle.show(first));
-      });
-    };
-    if (handle.attr) {
-      var obj = {};
-      obj[handle.attr] = this.getModel().get(handle.reqs[0]);
-      goog.array.forEach(this.getEls(selector), function(el) {
-        if(goog.isDef(obj[handle.attr]))
-          goog.dom.setProperties(el, obj);
-        else
-          el.removeAttribute(handle.attr);
-      });
-    };
+    this.autobindChange_.apply(this,
+        goog.array.concat([handle, selector], goog.array.clone(arguments)));
   };
   var bound = this.bind(handle.reqs, setHTML).fire();
   var ret = {
