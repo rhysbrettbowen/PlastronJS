@@ -382,6 +382,7 @@ mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
     } else {
       goog.array.forEach(removed, function(child) {
         this.removeChild(child, true);
+        child.dispose();
       }, this);
       goog.array.forEach(models, function(model, ind) {
         if(!goog.array.contains(childModels, model)) {
@@ -855,11 +856,11 @@ mvc.Control.prototype.disposeInternal = function() {
   goog.array.forEach(goog.array.clone(this.modelListeners_), function(id) {
     id.unbind();
   }, this);
-  this.eventHolder_ = null;
   goog.array.forEach(goog.array.clone(this.autoBinders_), function(bound) {
     bound.unbind();
   });
   goog.base(this, 'disposeInternal');
+  this.eventHolder_ = null;
 };
 
 
