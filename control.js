@@ -29,7 +29,6 @@ mvc.Control = function(model) {
   this.autoBinders_ = [];
   this.setModel(model);
   this.contentElement_ = null;
-  this.placeChild_ = null;
 };
 goog.inherits(mvc.Control, goog.ui.Component);
 
@@ -363,45 +362,48 @@ mvc.Control.prototype.getEls = function(selector, opt_parent) {
 mvc.Control.prototype.autolist = function(type, opt_listEl, opt_callback) {
   if(opt_listEl)
     this.contentElement_ = opt_listEl;
-  var fn = function() {
-    var model = this.getModel();
-    var models = model.getModels();
-    var children = this.children_ || [];
-    var childModels = goog.array.map(children, function(child) {
-      return child.getModel();
-    });
+  return this.modelChange(goog.bind(this.autolist_, this, type, opt_callback))
+    .fire();
+};
 
-    var removed = goog.array.filter(children, function(child) {
-      return !goog.array.contains(models, child.getModel());
-    });
-    if (children.length == 0) {
-      goog.array.forEach(models, function(model) {
-        var newChild = new type(model);
-        this.addChild(newChild, true);
-      }, this);
-    } else {
-      goog.array.forEach(removed, function(child) {
-        this.removeChild(child, true);
-        child.dispose();
-      }, this);
-      goog.array.forEach(models, function(model, ind) {
-        if(!goog.array.contains(childModels, model)) {
-          var child = new type(model);
-          child.createDom();
-          this.addChildAt(child, ind, true);
-        } else {
-          child = goog.array.find(children, function(c) {
-            return c.getModel() == model;
-          });
-          if (this.getChildAt(ind) != child)
-            this.addChildAt(child, ind);
-        }
-      
-      }, this);
-    }
-    opt_callback && opt_callback.call(this, this.getContentElement());
-  };
-  return this.modelChange(fn).fire();
+
+mvc.Control.prototype.autolist_ = function(type, opt_callback) {
+  var model = this.getModel();
+  var models = model.getModels();
+  var children = this.children_ || [];
+  var childModels = goog.array.map(children, function(child) {
+    return child.getModel();
+  });
+
+  var removed = goog.array.filter(children, function(child) {
+    return !goog.array.contains(models, child.getModel());
+  });
+  if (children.length == 0) {
+    goog.array.forEach(models, function(model) {
+      var newChild = new type(model);
+      this.addChild(newChild, true);
+    }, this);
+  } else {
+    goog.array.forEach(removed, function(child) {
+      this.removeChild(child, true);
+      child.dispose();
+    }, this);
+    goog.array.forEach(models, function(model, ind) {
+      if(!goog.array.contains(childModels, model)) {
+        var child = new type(model);
+        child.createDom();
+        this.addChildAt(child, ind, true);
+      } else {
+        child = goog.array.find(children, function(c) {
+          return c.getModel() == model;
+        });
+        if (this.getChildAt(ind) != child)
+          this.addChildAt(child, ind);
+      }
+    
+    }, this);
+  }
+  opt_callback && opt_callback.call(this, this.getContentElement());
 };
 
 
@@ -412,7 +414,7 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
     var data = {};
     if(handle.data) {
       goog.object.forEach(handle.data, function(val, key) {
-        data[key] = goog.isFunction(val) ? val(this) : key;
+        data[key] = goog.isFunction(val) ? val(this) : val;
       }, this);
     }
     data.model = this.getModel().get(handle.reqs);
@@ -571,14 +573,16 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
   }
   if (!goog.isDef(handle.noClick)) {
     blurs.push(this.click(function(e) {
-      if(handle.onClass) {
+      if (handle.onClass) {
         this.getModel().set(handle.reqs[0],
             !goog.dom.classes.has(e.target, handle.onClass));
-        e.stopPropagation();
+        if (handle.stop)
+          e.stopPropagation();
       } else if(e.target.tagName == 'INPUT' &&
           e.target.getAttribute('type') == 'checkbox') {
         this.getModel().set(handle.reqs[0], e.target.checked);
-        e.stopPropagation();
+        if (handle.stop)
+          e.stopPropagation();
       }
     }, selector, this, 30));
   }
