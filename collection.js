@@ -41,7 +41,8 @@ mvc.Collection = function(opt_options) {
    * @private
    * @type {?function(mvc.Model, mvc.Model):number}
    */
-  this.comparator_ = defaults['comparator'];
+  this.comparator_ = defaults['comparator'] && 
+      goog.bind(defaults['comparator'], this);
 
   /**
    * @private
@@ -145,7 +146,7 @@ mvc.Collection.prototype.pluck = function(key) {
  * @param {boolean=} opt_silent to suppress change event.
  */
 mvc.Collection.prototype.setComparator = function(fn, opt_silent) {
-  this.comparator_ = fn;
+  this.comparator_ = goog.bind(fn, this);
   this.sort(opt_silent);
 };
 
@@ -352,6 +353,20 @@ mvc.Collection.prototype.getModels = function(opt_filter) {
   if (opt_filter)
     return goog.array.filter(mods, /** @type {Function} */(opt_filter));
   return mods;
+};
+
+
+mvc.Collection.prototype.setModels = function(arr, opt_silent) {
+  var mods = this.getModels();
+  goog.array.forEach(mods, function(mod) {
+    if (!goog.array.contains(arr, mod))
+      this.remove(mod, true);
+  }, this);
+  goog.array.forEach(arr, function(addMod) {
+    this.add(addMod, undefined, true);
+  }, this);
+  if (!opt_silent)
+    this.change();
 };
 
 

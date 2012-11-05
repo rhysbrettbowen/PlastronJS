@@ -94,7 +94,7 @@ mvc.Router.prototype.route = function(route, fn, opt_context) {
     callback: fn, 
     context: opt_context
   };
-  this.runRouteIfMatches_(completeRoute, this.currentFragment_);
+  //this.runRouteIfMatches_(completeRoute, this.currentFragment_);
   this.routes_.push(completeRoute);
 };
 
@@ -107,7 +107,9 @@ mvc.Router.prototype.runRouteIfMatches_ = function(route, fragment) {
   var args = route.route.exec(fragment);
   if (args) {
     route.callback.apply(route.context, args);
+    return true;
   }
+  return false;
 }
 
 /**
@@ -122,8 +124,16 @@ mvc.Router.prototype.onChange_ = function() {
         current: fragment
     });
     this.currentFragment_ = fragment;
-    goog.array.forEach(this.routes_ || [], function(route) {
-      this.runRouteIfMatches_(route, fragment);
+    goog.array.find(this.routes_ || [], function(route) {
+      return this.runRouteIfMatches_(route, fragment);
     }, this);
   }
 };
+
+mvc.Router.prototype.checkRoutes = function() {
+  var fragment = this.history_.getToken();
+  this.currentFragment_ = fragment;
+    goog.array.find(this.routes_ || [], function(route) {
+      return this.runRouteIfMatches_(route, fragment);
+    }, this);
+}

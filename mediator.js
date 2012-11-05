@@ -234,16 +234,21 @@ mvc.Mediator.prototype.on = function(message, fn, opt_handler) {
     }, this);
     return null;
   }
+  if (goog.isFunction(fn)) {
+    fn = {fn: fn};
+  }
+  if (fn.fn)
+    fn.fn = goog.bind(fn.fn, opt_handler || this);
+  if (fn.init)
+    fn.init = goog.bind(fn.init, opt_handler || this);
+  if (fn.dispose)
+    fn.dispose = goog.bind(fn.dispose, opt_handler || this);
   this.listeners_[message] = this.listeners_[message] || [];
   if (!this.listeners_[message].length) {
     if (fn.init && this.available_[message]) {
       fn.init(this.available_[message][0]);
     }
   }
-  if (goog.isFunction(fn)) {
-    fn = {fn: fn};
-  }
-  fn.fn = goog.bind(fn.fn, opt_handler || this);
   fn.id = opt_handler || this;
   goog.array.insert(this.listeners_[message],
       fn);

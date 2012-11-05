@@ -111,6 +111,7 @@ var testAddressParsedAfterAdding = function() {
     router.route(startRoute, function() {
         routed = true;
     });
+    router.checkRoutes();
 
     assertTrue(routed);
 };

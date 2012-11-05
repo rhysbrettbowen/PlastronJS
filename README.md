@@ -576,6 +576,9 @@ router.route("/note=:id[/edit]{/:entity}[?*]",
 );
 router.navigate('/note=1234567890/edit/message?abc=123');
 ```
+Once you have setup your routes you can check run through the new routes with router.checkRoutes();
+
+Only the first matching route will be run so order is important.
 
 ## mvc.Mediator ##
 
@@ -729,6 +732,12 @@ app.MyControl = function(model, content) {
 goog.inherits(app.MyControl, mvc.Control);
 
 ### changelog ###
+
+### v1.0.5 beta ###
+
+- router will not run route when added, you can check the routes once the routes are added with router.checkRoutes();
+- mvc.Control has been split out in to mvc.Layout and mvc.Control. mvc.Layout gives extra functionality on top of goog.ui.Component and mvc.Control inherits from it with functions that need a model.
+- you can now use get/set/bind to use properties under an object literal. Fo example you can do things like model.set('address.city', 'San Francisco') which will fire anything you bind to 'address' and 'address.city'.
 
 ### v1.0.3 beta ###
 

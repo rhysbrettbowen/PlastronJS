@@ -296,8 +296,11 @@ mvc.Model.prototype.get = function(key, opt_default) {
         },this));
     return goog.isDef(get) ? get : opt_default;
   }
-  return goog.isDef(this.attr_[/** @type {!string} */(key)]) ?
-      this.attr_[/** @type {!string} */(key)] : opt_default;
+  var path = key.split('.').reverse();
+  var obj = this.attr_;
+  while (path.length && goog.isDef(obj))
+    obj = obj[path.pop()];
+  return goog.isDef(obj) ? obj : opt_default;
 };
 
 
@@ -377,20 +380,34 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
         success = true;
     } else {
       try {
-        if (this.schema_[key] && this.schema_[key].set)
-          this.attr_[key] = goog.bind(
+        if (this.schema_[key] && this.schema_[key].set) {
+          var temp = goog.bind(
               this.parseSchemaFn_(this.schema_[key].set), this)
                   (val, opt_silent);
-        else
-          this.attr_[key] = val;
+          this.attr_[key] = temp;
+        } else {
+          var path = key.split('.').reverse();
+          var obj = this.attr_;
+          while (path.length > 1) {
+            var curr = path.pop();
+            obj[curr] = obj[curr] || {};
+            obj = obj[curr];
+          }
+          obj[path.pop()] = val;
+        }
         var schema = this.schema_[key];
-        if(goog.isDef(schema) && goog.isFunction(schema.cmp)) {
+        var get = this.get(key);
+        var prev = this.prev(key);
+        if (goog.isDef(schema) && goog.isFunction(schema.cmp)) {
           var cmp = schema.cmp;
-          if(goog.isFunction(cmp) && 
-              !cmp(this.get(key), this.prev(key))) {
+          if (goog.isFunction(cmp) && 
+              !cmp(get, prev)) {
             success = true;
           }
-        } else if(this.get(key) !== this.prev(key)) {
+        } else if (goog.isObject(get) || goog.isObject(prev)) {
+          if (!mvc.Model.Compare.RECURSIVE(get, prev))
+            success = true;
+        } else if (get !== prev) {
           success = true;
         }
       } catch (err) {
@@ -541,29 +558,50 @@ mvc.Model.prototype.setter = function(attr, fn) {
  */
 mvc.Model.prototype.getChanges = function() {
 
-  // use schema to look for differences
-  var ret = goog.object.getKeys(goog.object.filter(this.schema_,
-      function(val, key) {
-        var schema = this.schema_[key];
-        if (schema.cmp)
-          return !schema.cmp(this.prev(key), this.get(key));
-        var prev = this.prev(key);
-        if (goog.isArray(prev)) {
-          return !goog.array.equals(prev, this.get(key));
-        }
-        return this.prev(key) != this.get(key);
-      }, this));
+  var schema = this.schema_;
 
-  // look through actual attribute values
-  goog.array.extend(ret, goog.object.getKeys(goog.object.filter(this.attr_,
-      function(val, key) {
-        if (goog.isDef(this.schema_[key]))
-          return false;
-        if (goog.isArray(val)) {
-          return !goog.array.equals(val, this.prev_[key]);
-        }
-        return val !== this.prev_[key];
-      }, this)));
+  var keys = goog.array.concat(goog.object.getKeys(schema),
+      goog.object.getKeys(this.attr_));
+  goog.array.removeDuplicates(keys);
+
+  return goog.array.reduce(keys, function(arr, key) {
+    var prev = this.prev(key);
+    var get = this.get(key);
+    if (schema[key] && schema[key].cmp) {
+      if (!schema[key].cmp(prev, get)) {
+        arr.push(key);
+      }
+      return arr;
+    }
+    return goog.array.concat(arr, this.getObjChanges_(get, prev, key));
+  }, [], this);
+};
+
+/**
+ * returns an array of paths that are different
+ * 
+ * @param {*} a first object
+ * @param {*} b second object
+ * @param {string} path the rooth path
+ * @return {Array.<string>} [description]
+ */
+mvc.Model.prototype.getObjChanges_ = function(a, b, path) {
+  if (!goog.isObject(a) && !goog.isObject(b)) {
+    return a === b ? [] : [path];
+  }
+  var keys = goog.array.concat(goog.object.getKeys(a), goog.object.getKeys(b));
+  goog.array.removeDuplicates(keys);
+  var ret = goog.array.reduce(keys, function(arr, key) {
+    if (!goog.isObject(a))
+      return goog.array.concat(arr,
+          this.getObjChanges_(undefined, b[key], path + '.' + key));
+    if (!goog.isObject(b))
+      return goog.array.concat(arr,
+          this.getObjChanges_(a[key], undefined, path + '.' + key));
+    return goog.array.concat(arr,
+        this.getObjChanges_(a[key], b[key], path + '.' + key));
+  }, [], this);
+  if (ret.length) ret.push(path);
   return ret;
 };
 
