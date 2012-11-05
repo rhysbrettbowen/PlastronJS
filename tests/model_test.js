@@ -574,3 +574,35 @@ var testUnbindUnload = function() {
 
 };
 
+var testDotPropertySet = function() {
+  var a = new mvc.Model();
+  a.set('a.a', 1);
+  assert(!!a.attr_.a);
+  assertEquals(1, a.attr_.a.a);
+  a.set('a.b', 1);
+  assertEquals(1, a.attr_.a.a);
+  assertEquals(1, a.attr_.a.b);
+};
+
+var testDotPropertyGet = function() {
+  var a = new mvc.Model();
+  a.attr_.a = {a:1};
+  assertEquals(1, a.get('a.a'));
+};
+
+var testDotPropertyBind = function() {
+  var a = new mvc.Model();
+  a.attr_.a = {a:1, b:1};
+  a.change();
+  var bindA = false;
+  var bindAA = false;
+  var bindAB = false;
+  a.bind('a', function() {bindA = true;});
+  a.bind('a.a', function() {bindAA = true;});
+  a.bind('a.b', function() {bindAB = true;});
+  a.set('a.a', 2);
+  assert(bindA);
+  assert(bindAA);
+  assertFalse(bindAB);
+};
+

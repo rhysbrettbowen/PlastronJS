@@ -30,8 +30,11 @@ testListen = function() {
 testUnlisten = function() {
   listen = med.on('test', function() {});
   assert(med.isListened('test'));
-  med.off(listen);
+  var found = med.off(listen);
+  var notFound = !med.off(listen+1);
   assert(!med.isListened('test'));
+  assert(found);
+  assert(notFound);
 };
 
 testInit = function() {

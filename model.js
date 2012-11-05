@@ -589,7 +589,8 @@ mvc.Model.prototype.getObjChanges_ = function(a, b, path) {
   if (!goog.isObject(a) && !goog.isObject(b)) {
     return a === b ? [] : [path];
   }
-  var keys = goog.array.concat(goog.object.getKeys(a), goog.object.getKeys(b));
+  var keys = goog.array.concat(goog.object.getKeys(/** @type {Object} */(a)),
+      goog.object.getKeys(/** @type {Object} */(b)));
   goog.array.removeDuplicates(keys);
   var ret = goog.array.reduce(keys, function(arr, key) {
     if (!goog.isObject(a))

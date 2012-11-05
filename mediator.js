@@ -326,7 +326,9 @@ mvc.Mediator.prototype.off = function(uid) {
   var rem = [];
   goog.object.forEach(this.listeners_, function(listener, key) {
     while(goog.array.removeIf(listener, function(el) {
-      return goog.getUid(el) == uid || el.id == uid;
+      var del = goog.getUid(el) == uid || el.id == uid
+      ret = ret || del;
+      return del;
     })) {}
     if(!listener.length)
       rem.push(key);
