@@ -50,19 +50,19 @@ mvc.AjaxSync = function(url) {
  * urlGen(obj); // returns "/object=fred/blah"
  *
  *
- * @param {string} val to be changed to a function.
+ * @param {Function|string} val to be changed to a function.
  * @return {function(mvc.Model):string} function that gives URL.
  */
 mvc.AjaxSync.prototype.urlifyString = function(val) {
-  if (goog.isString(val)) {
-    return function(model) {
-      return val.replace(/:(\w+)/g,
-          function(id) {
-            return model.get(id.substring(1));
-          });
-    };
-  }
-  return /** @type {function(mvc.Model):string} */(val);
+  return function(model) {
+    var v = val;
+    if (goog.isFunction(v))
+      v = v(model);
+    return v.replace(/:(\w+)/g,
+        function(id) {
+          return escape(model.get(id.substring(1)));
+        });
+  };
 };
 
 
