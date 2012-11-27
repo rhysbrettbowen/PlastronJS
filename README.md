@@ -733,6 +733,11 @@ goog.inherits(app.MyControl, mvc.Control);
 
 ### changelog ###
 
+### v1.0.6 beta ###
+
+- added in new test for setting within a bind, no will not go in to infinite loop
+- added a getFiltered() method for mvc.Collection which will return the original collection with a filter on it
+
 ### v1.0.5 beta ###
 
 - router will not run route when added, you can check the routes once the routes are added with router.checkRoutes();
