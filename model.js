@@ -88,7 +88,12 @@ mvc.Model = function(opt_options) {
    */
   this.cid_ = '' + goog.getUid(this);
 
+  this.changing_ = [false];
+  this.waitChange_ = {};
+  this.waitChangeSilent_ = [true];
+
   this.set(defaults['attr']);
+
 
   this.dispatchEvent(goog.events.EventType.LOAD);
 };
@@ -362,6 +367,17 @@ mvc.Model.prototype.has = function(key) {
  */
 mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
+  if (this.changing_[0]) {
+    if (goog.isString(key)) {
+      this.waitChange_[key] = opt_val;
+      this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_silent;
+    } else {
+      goog.object.extend(this.waitChangeSilent_, key);
+      this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_val;
+    }
+    return;
+  }
+
   // handle key value as string or object
   var success = false;
   if (goog.isString(key)) {
@@ -451,8 +467,6 @@ mvc.Model.prototype.unset = function(key, opt_silent) {
  */
 mvc.Model.prototype.change = function() {
   this.dispatchEvent(goog.events.EventType.CHANGE);
-  this.prev_ = /** @type {Object.<(Object|null)>|null} */
-      (goog.object.unsafeClone(this.attr_));
 };
 
 
@@ -627,6 +641,7 @@ mvc.Model.prototype.revert = function(opt_silent) {
 /**
  * @param {boolean=} opt_sync pass true to del the sync to delete the model.
  * @param {Function=} opt_callback function to call after sync delete finishes
+ * @override
  */
 mvc.Model.prototype.dispose = function(opt_sync, opt_callback) {
   if (opt_sync)
@@ -635,7 +650,7 @@ mvc.Model.prototype.dispose = function(opt_sync, opt_callback) {
   goog.array.forEach(goog.array.clone(this.onUnload_), function(fn) {
     fn(this);
   }, this);
-  this.disposeInternal();
+  goog.base(this, 'dispose');
 };
 
 
@@ -730,6 +745,7 @@ mvc.Model.prototype.getBinder = function(key) {
  * @private
  */
 mvc.Model.prototype.change_ = function() {
+  this.changing_[0] = true;
   var changes = this.getChanges();
   goog.array.forEach(this.bound_, function(val) {
     if (goog.array.some(val.attr, function(attr) {
@@ -741,11 +757,19 @@ mvc.Model.prototype.change_ = function() {
           },this)));
     }
   }, this);
-  if (!changes.length)
-    return;
-  goog.object.forEach(this.boundAll_, function(val) {
-    val(this);
-  }, this);
+  if (changes.length) {
+    goog.object.forEach(this.boundAll_, function(val) {
+      val(this);
+    }, this);
+  }
+  this.prev_ = /** @type {Object.<(Object|null)>|null} */
+      (goog.object.unsafeClone(this.attr_));
+  this.changing_[0] = false;
+  var clone = goog.object.clone(this.waitChange_);
+  goog.object.clear(this.waitChange_);
+  var silent = this.waitChangeSilent_[0];
+  this.waitChangeSilent_[0] = true;
+  this.set(clone, silent);
 };
 
 

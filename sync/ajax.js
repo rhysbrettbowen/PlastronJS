@@ -60,7 +60,8 @@ mvc.AjaxSync.prototype.urlifyString = function(val) {
       v = v(model);
     return v.replace(/:(\w+)/g,
         function(id) {
-          return escape(model.get(id.substring(1)));
+          return model.get(id.substring(1), '')
+              .replace(/#/g, '%23').replace(/&/g, '%26');
         });
   };
 };
@@ -124,7 +125,7 @@ mvc.AjaxSync.prototype.del = function(model, opt_callback) {
 mvc.AjaxSync.prototype.onCreateComplete_ = function(model, callback, e) {
   var xhr = e.target;
   model.set('id', xhr.getResponseJson()['result']['id']);
-  callback.call(model, model);
+  callback.call(model, model, e);
 };
 
 
@@ -140,7 +141,7 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
   var xhr = e.target;
   var json = xhr.getResponseJson()['result'];
   model.set(json);
-  callback.call(model, model);
+  callback.call(model, model, e);
 };
 
 
@@ -153,7 +154,7 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
  * @param {goog.events.Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
-  callback.call(model, model);
+  callback.call(model, model, e);
 };
 
 
@@ -166,5 +167,5 @@ mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
  * @param {goog.events.Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onDelComplete_ = function(model, callback, e) {
-  callback.call(model, model);
+  callback.call(model, model, e);
 };

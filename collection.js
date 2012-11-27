@@ -8,6 +8,8 @@ goog.provide('mvc.Collection');
 goog.require('goog.events.Event');
 goog.require('goog.events.EventTarget');
 goog.require('mvc.Model');
+goog.require('mvc.Mod');
+goog.require('mvc.Filter');
 
 
 
@@ -37,12 +39,8 @@ mvc.Collection = function(opt_options) {
    */
   this.models_ = [];
 
-  /**
-   * @private
-   * @type {?function(mvc.Model, mvc.Model):number}
-   */
-  this.comparator_ = defaults['comparator'] && 
-      goog.bind(defaults['comparator'], this);
+  this.comparator_ = [defaults['comparator'] && 
+      goog.bind(defaults['comparator'], this)];
 
   /**
    * @private
@@ -85,11 +83,9 @@ mvc.Collection = function(opt_options) {
   this.removedModelsFns_ = [];
 
 
-  /**
-   * @private
-   * @type {boolean}
-   */
-  this.modelChange_ = false;
+  this.modelChange_ = [false];
+
+  this.anyModelChange_ = [false];
 
   /**
    * @private
@@ -146,8 +142,26 @@ mvc.Collection.prototype.pluck = function(key) {
  * @param {boolean=} opt_silent to suppress change event.
  */
 mvc.Collection.prototype.setComparator = function(fn, opt_silent) {
-  this.comparator_ = goog.bind(fn, this);
+  this.comparator_[0] = goog.bind(fn, this);
   this.sort(opt_silent);
+};
+
+
+
+mvc.Collection.prototype.getFiltered = function(fn) {
+  /** @constructor */
+  var Filter = function() {};
+
+  Filter.prototype = this;
+  var filter = new Filter();
+  filter.init = function(a,b) {};
+
+  goog.mixin(filter, mvc.Mod);
+  goog.mixin(filter, mvc.Filter);
+
+  filter.init(this, fn);
+
+  return filter;
 };
 
 
@@ -168,8 +182,8 @@ mvc.Collection.prototype.getLength = function() {
  */
 mvc.Collection.prototype.sort = function(opt_silent) {
   var changeOrder = false;
-  if (this.comparator_) {
-    var comp = this.comparator_;
+  if (this.comparator_[0]) {
+    var comp = this.comparator_[0];
 
     // need to wrap comparator in function to record a change
     this.models_.sort(function(a, b) {
@@ -178,7 +192,7 @@ mvc.Collection.prototype.sort = function(opt_silent) {
         changeOrder = true;
       return ret;
     });
-    this.modelChange_ = this.modelChange_ || changeOrder;
+    this.modelChange_[0] = this.modelChange_[0] || changeOrder;
   }
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
@@ -220,10 +234,10 @@ mvc.Collection.prototype.add = function(model, opt_ind, opt_silent) {
 
         // insert model and setup listeners for changes
         insert = true;
-        this.modelChange_ = true;
-        this.anyModelChange_ = true;
+        this.modelChange_[0] = true;
+        this.anyModelChange_[0] = true;
         var changeId = mod.bindAll(goog.bind(function() {
-          this.anyModelChange_ = true;
+          this.anyModelChange_[0] = true;
           this.sort();
         }, this));
         var unloadId = mod.bindUnload(function(e) {
@@ -298,8 +312,8 @@ mvc.Collection.prototype.remove = function(model, opt_silent) {
     if (modelObj) {
 
       // remove listeners and remove model
-      this.modelChange_ = true;
-      this.anyModelChange_ = true;
+      this.modelChange_[0] = true;
+      this.anyModelChange_[0] = true;
       model.unbind(modelObj.unload);
       model.unbind(modelObj.change);
       goog.array.remove(this.models_, modelObj);
@@ -408,7 +422,7 @@ mvc.Collection.prototype.clear = function(opt_silent, opt_filter) {
     modelsToClear = goog.array.filter(modelsToClear, /** @type {Function} */(opt_filter));
   }
   this.remove(modelsToClear, true);
-  this.modelChange_ = true;
+  this.modelChange_[0] = true;
   if (!opt_silent) {
     this.dispatchEvent(goog.events.EventType.CHANGE);
   }
@@ -549,15 +563,15 @@ mvc.Collection.prototype.change_ = function() {
   goog.base(this, 'change_');
 
   // if the models have changed then fire listeners
-  if (this.modelChange_) {
+  if (this.modelChange_[0]) {
     goog.array.forEach(goog.array.clone(this.modelChangeFns_), function(fn) {
       fn(this);
     }, this);
-    this.modelChange_ = false;
+    this.modelChange_[0] = false;
   }
 
   // if the models have changed any values then fire listeners
-  if (this.anyModelChange_) {
+  if (this.anyModelChange_[0]) {
     goog.array.forEach(goog.array.clone(this.anyModelChangeFns_), function(fn) {
       fn(this);
     }, this);
@@ -577,7 +591,7 @@ mvc.Collection.prototype.change_ = function() {
         }
       }, this);
     }
-    this.anyModelChange_ = false;
+    this.anyModelChange_[0] = false;
   }
 
   goog.array.forEach(this.removedModelsFns_, function(fn) {
@@ -585,12 +599,12 @@ mvc.Collection.prototype.change_ = function() {
       fn(mod.model, mod.id);
     });
   }, this);
-  this.removedModels_ = [];
+  goog.array.clear(this.removedModels_);
 
   goog.array.forEach(this.addedModelsFns_, function(fn) {
     goog.array.forEach(this.addedModels_, function(mod) {
       fn(mod);
     });
   }, this);
-  this.addedModels_ = [];
+  goog.array.clear(this.addedModels_);
 };

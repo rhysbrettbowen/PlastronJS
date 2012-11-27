@@ -606,3 +606,20 @@ var testDotPropertyBind = function() {
   assertFalse(bindAB);
 };
 
+var testBindFnWithSetter = function() {
+  var arr = 0, curItem = 0, silent = false;
+  var m = mvc.Model.create({
+    'arr': [1,2,3],
+    'curItem': 0
+  });
+  m.bind('curItem', function() {
+    curItem++;
+    m.set('arr', [4,5], silent);
+  });
+  m.bind('arr', function() { arr++; });
+  m.set('curItem', 1);
+  assertEquals('Should have fired "arr" listener', arr, 1);
+  assertEquals('Should have changed "arr"', m.get('arr').length, 2);
+  assertEquals('Should have fired "curItem" listener', curItem, 1);
+}
+
