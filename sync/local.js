@@ -34,6 +34,9 @@ mvc.LocalSync.prototype.getUID = function() {
 mvc.LocalSync.prototype.create = function(model, opt_callback) {
   var id = this.getUID();
   model.set('id', id);
+  if (goog.isFunction(opt_callback)) {
+    opt_callback.call(model, model);
+  }
 };
 
 
@@ -43,6 +46,9 @@ mvc.LocalSync.prototype.create = function(model, opt_callback) {
 mvc.LocalSync.prototype.read = function(model, opt_callback) {
   model.set(/** @type {Object} */(this.store_.get(
       /** @type {string} */(model.get('id')))));
+  if (goog.isFunction(opt_callback)) {
+    opt_callback.call(model, model);
+  }
 };
 
 
@@ -51,6 +57,9 @@ mvc.LocalSync.prototype.read = function(model, opt_callback) {
  */
 mvc.LocalSync.prototype.update = function(model, opt_callback) {
   this.store_.set(/** @type {string} */(model.get('id')), model.toJson());
+  if (goog.isFunction(opt_callback)) {
+    opt_callback.call(model, model);
+  }
 };
 
 
@@ -59,4 +68,7 @@ mvc.LocalSync.prototype.update = function(model, opt_callback) {
  */
 mvc.LocalSync.prototype.del = function(model, opt_callback) {
   this.store_.remove(/** @type {string} */(model.get('id')));
+  if (goog.isFunction(opt_callback)) {
+    opt_callback.call(model, model);
+  }
 };

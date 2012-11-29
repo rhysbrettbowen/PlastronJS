@@ -50,19 +50,20 @@ mvc.AjaxSync = function(url) {
  * urlGen(obj); // returns "/object=fred/blah"
  *
  *
- * @param {string} val to be changed to a function.
+ * @param {Function|string} val to be changed to a function.
  * @return {function(mvc.Model):string} function that gives URL.
  */
 mvc.AjaxSync.prototype.urlifyString = function(val) {
-  if (goog.isString(val)) {
-    return function(model) {
-      return val.replace(/:(\w+)/g,
-          function(id) {
-            return model.get(id.substring(1));
-          });
-    };
-  }
-  return /** @type {function(mvc.Model):string} */(val);
+  return function(model) {
+    var v = val;
+    if (goog.isFunction(v))
+      v = v(model);
+    return v.replace(/:(\w+)/g,
+        function(id) {
+          return model.get(id.substring(1), '')
+              .replace(/#/g, '%23').replace(/&/g, '%26');
+        });
+  };
 };
 
 
@@ -124,6 +125,7 @@ mvc.AjaxSync.prototype.del = function(model, opt_callback) {
 mvc.AjaxSync.prototype.onCreateComplete_ = function(model, callback, e) {
   var xhr = e.target;
   model.set('id', xhr.getResponseJson()['result']['id']);
+  callback.call(model, model, e);
 };
 
 
@@ -139,6 +141,7 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
   var xhr = e.target;
   var json = xhr.getResponseJson()['result'];
   model.set(json);
+  callback.call(model, model, e);
 };
 
 
@@ -148,9 +151,10 @@ mvc.AjaxSync.prototype.onReadComplete_ = function(model, callback, e) {
  * @private
  * @param {mvc.Model} model being processed.
  * @param {Function} callback to be called when done.
- * @param {Event} e the completed xhr event.
+ * @param {goog.events.Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
+  callback.call(model, model, e);
 };
 
 
@@ -160,7 +164,8 @@ mvc.AjaxSync.prototype.onUpdateComplete_ = function(model, callback, e) {
  * @private
  * @param {mvc.Model} model being processed.
  * @param {Function} callback to be called when done.
- * @param {Event} e the completed xhr event.
+ * @param {goog.events.Event} e the completed xhr event.
  */
 mvc.AjaxSync.prototype.onDelComplete_ = function(model, callback, e) {
+  callback.call(model, model, e);
 };

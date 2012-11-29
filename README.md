@@ -1,6 +1,10 @@
 # PlastronJS #
 formerly goog.mvc
 
+#### API change ####
+
+if you've been using the mvc.Control methods on, once or click then there is a change for the second parameter which now takes a selector rather than a class name. This should be changed by adding a '.' or a '-' at the start. If you a compiling class names the it should look like this: goog.getCssName('-myclass')
+
 I've given the project v1 beta status which means that it's mostly tested but not used in production yet and the existing API is unlikely to change (if it does I'll provide backwards compatability until v2 - if one is ever made, I have some plans for future revisions) and any new additions wil get a .x version number. And bug fixes will get a .x.X version number.
 
 I'm using it as the foundation of Catch.com's new webclient which will be much shinier and more interactive than possible with the old codebase and will move the project to release once the new site is in production (later in 2012).
@@ -139,7 +143,7 @@ model.set({
     'lastName': 'Brett-Bowen'
     });
 model.meta('name', ['firstName', 'lastName'], function(firstName, lastName) {
-    return lastName + ", " + Rhys;
+    return lastName + ", " + firstName;
 });
 model.get('name'); // returns "Brett-Bowen, Rhys"
 ```
@@ -186,6 +190,17 @@ task.unbind(bound);
 
 in the example above we saved a uid in bound that we can use to unbind a listener. All bind functions return a uid that can be used with unbind.
 
+recently the mvc.Model bind functions started returning boundEvent objects. You can still pass these to unbind or you can call unbind directly upon them. You can also call the fire function to execute the function (this can be handy when you want the function to run once at the start to setup the value, for instance:)
+
+```javascript
+var bound = model.bind('text', function(text) {
+  element.setText(text);
+}).fire();
+
+// later
+bound.unbind();
+```
+
 ### binding keys to a function ###
 
 the model class comes with a function getBinder that can be used to bind a function to a key. For instance you can use it for convenience methods to get and set keys:
@@ -211,6 +226,18 @@ wife.get('city') // returns New York
 
 if you want to listen to any change you can use bindAll and just pass in a function. and an optional handler.
 
+### autosaving ###
+
+you can tell a model to save itself when there are any changes or changes to particular attributes.
+
+To save the model on any change just call:
+
+myModel.autosave(opt_callback);
+
+or for certain attributes:
+
+myModel.autosave(['text', 'thumbnail'], opt_callback);
+
 ### unload ###
 
 there is also a bindUnload that takes in a function and an optional handler to be fired when the model's dispose() method is called.
@@ -232,8 +259,8 @@ There are also other functions that can take parameters such as the boolean "sil
 - getChanges: tells you what values has changed since the last change event used internally by bind to figure out what to fire change events for
 - revert: rolls back to the previous attributes
 - fetch(callback, silent): updates the model using it's sync
-- save: tells the sync to create/update
-- dispose(bool): disposes of the model and all it's listeners. Pass true if you want the model to call the model's sync's delete function
+- save(opt_callback): tells the sync to create/update
+- dispose(bool, opt_callback): disposes of the model and all it's listeners. Pass true if you want the model to call the model's sync's delete function
 
 ## Schema ##
 
@@ -343,6 +370,7 @@ A collection also offers these aditional methods:
 - getById(id): returns a model by it's id
 - getModels(Function): returns an array of the models optionally filtered by a function that takes the model and the index and returns true if it should be returned in the filter otherwise false
 - at(index): return the model at an index
+- indexOf(model): return the index of the model, or -1 if it is not in the collection
 - clear: clears all the models
 - modelChange(function, handler): like bind for model but is bound only on changes to the collections children being sorted or added/removed
 - anyModelChange(function, handler): similar to modelChange but will fire when any model is changed regardless of it it updates sort order
@@ -384,7 +412,7 @@ control.getModel() == model; // true
 
 a control has the function getEls(selector) which can find elements in it's DOM for you. All you need to do is pass it a valid selector that can be in the form of:
 
-- ".className"
+- ".className" || "-className"
 - "#elementId"
 - "tagName[ .className]"
 
@@ -409,10 +437,10 @@ But what if you want to listen for a click on a particular element?
 
 ### delegating events ###
 
-You can decide whether or not to fire a handler by either the className of the element (or an array of classNames if it can fire or any of them) or a function that takes the event and returns true if it should be handled. for instance:
+You can decide whether or not to fire a handler by either the a selector that matches the element or a function that takes the event and returns true if it should be handled. for instance:
 
 ```javascript
-this.click(function(){alert('click')}, ["star", "unstar"]);
+this.click(function(){alert('click')}, [".star", ".unstar"]);
 ```
 
 will fire for any element that has the class star or unstar. If you want to fine tune it more you could use a function:
@@ -422,6 +450,14 @@ this.click(function(){alert("click");}, function(e) {return e.clientX<100;});
 ```
 
 this will fire for clicks in the left 100px of the screen that are on the control.
+
+These functions will also return a boundEvent object. The function can be fired using .fire(opt_target) and turned off using off().
+
+```javascript
+var bound = this.on('click', function(e) {alert(e.target);}).fire(this.getEls('-button')[0]);
+// later
+bound.off()
+```
 
 ### handling priorities ###
 
@@ -442,7 +478,7 @@ above the arguments in the last click call are the function, the decider functio
 
 ### unhandling ###
 
-you can use the off method like I have above to unbind any handlers just like unbind in models.
+you can use the off method like above to unbind any handlers just like unbind in models.
 
 ### handling notes ###
 
@@ -461,7 +497,7 @@ The best place to setup bindings is in the controls enterDocument method. for in
 ```javascript
 this.click(function(e) {
   this.getModel().set('star', !this.getModel().get('star'));
-  }, "starButton");
+  }, ".starButton");
 this.getModel().bind('star', function(star) {
   if(star)
     goog.dom.classes.add(this.getEls(".starButton")[0], 'star');
@@ -474,7 +510,7 @@ now clicking on the star button will change the star attribute and that will in 
 
 ### bind to a model ###
 
-you caninstead of doing this:
+instead of doing this:
 
 ```javascript
 this.getModel().bind('star', myFunc, this);
@@ -501,26 +537,48 @@ The AjaxSync can be used and passed an object of functions or strings (with the 
 
 ## mvc.Router ##
 
-mvc.Router uses goog.History and hash tokens to hold and manage the state of the application. You can define a route with a regular expression that will fire custom events when a certain route comes on the URL. A route can be defined with a route expression which can take : followed by an attribute, a * to pass the rest of the route and [] for an optional part of the url (which will be passed to the function). For instance:
+mvc.Router uses goog.History and hash tokens to hold and manage the state of the application. You can define a route with a regular expression that will fire custom events when a certain route comes on the URL. A route can be defined with a route expression which can take : followed by an attribute, a * to pass the rest of the route, [] for an optional part of the url (which will be passed to the function) and {} for an optional part that will be not passed to the function. For instance:
 
 ```javascript
-route = "/note=:id[/edit][?*]";
+route = "/note=:id[/edit]{/:entity}[?*]";
 ```
-should take a function with four attribute:
+should take a function with six attribute:
 ```javascript
-function(id,edit,query,queryVals)
+function(fragment,id,edit,entity,query,queryVals)
 ```
 
-so for /note=1234567890/edit?abc=123 will give:
+so for /note=1234567890/edit/message?abc=123 will give:
 
 ```javascript
-function(id,edit,query,queryVals) {
+function(fragment,id,edit,entity,query,queryVals) {
+    console.log(fragment); // /note=1234567890/edit/message?abc=123
     console.log(id); // 1234567890
     console.log(edit); // /edit
+    console.log(entity); // message
     console.log(query); // ?abc=123
     console.log(queryVals); // abc=123
 }
 ```
+
+you can setup a new route to listen for and navigate to it like this:
+
+```javascript
+var router = new mvc.Router();
+router.route("/note=:id[/edit]{/:entity}[?*]",
+    function(fragment,id,edit,entity,query,queryVals) {
+      console.log(fragment); // /note=1234567890/edit/message?abc=123
+      console.log(id); // 1234567890
+      console.log(edit); // /edit
+      console.log(entity); // message
+      console.log(query); // ?abc=123
+      console.log(queryVals); // abc=123
+    }
+);
+router.navigate('/note=1234567890/edit/message?abc=123');
+```
+Once you have setup your routes you can check run through the new routes with router.checkRoutes();
+
+Only the first matching route will be run so order is important.
 
 ## mvc.Mediator ##
 
@@ -543,6 +601,49 @@ goog.addSingletonGetter(myapp.Mediator);
 
 you can then register your object with the mediator and the messages that you may pass. This allows other modules that are listening for a specific message to run some initiation, or dispose when you unregister. You can listen to messages using the on method and stop using the off method. You can even test to see if anyone is listening for a message using the isListened method
 
+### registering an object ###
+
+you can let other objects know that you can fire specific messages. To do thisjust call the Mediator with the messages your object. To register an object just call:
+
+mvc.Mediator.register = function(object, messages)
+
+where object is the object you are registering and messages is an array of the messages it can fire (doing this will allow listeners to call their initialization functions if they match). Doing this will also decorate your object with a broadcast function so you can just call:
+
+myObj.broadcast(message, data)
+
+instead of calling it on the mediator. If you don't want this function added just pass along true as the third parameter to register.
+
+You can unregister an object (allowing listeners to call their dispose functions) by calling
+
+mvc.Mediator.unregister(obj, opt_messages)
+
+you can pass in an array of messages to only remove those messages or leave undefined to remove all
+
+### namespaces ###
+
+you can namespace your messages using '.' and then listen to messages using wildcards '*' for match anything and '%' to match anything within that level, so:
+
+a.* will match a.b.c
+a.%.c will match a.b.c but a.% won't
+
+You can change these wildcards by passing in when creating the mediator:
+
+mediator = new mvc.Mediator({
+  split: ':',
+  wild: '$',
+  wildlvl: '&'
+});
+
+The mediator will take wildcards in to account when testing for listened messages.
+
+### listening ###
+
+you can listen for messages by calling:
+
+mediator.on(message, fn, opt_handler)
+
+where message is the message (or array of messages) you're listening for, function is what is to be run and the opt_handler is what you want to bind the function to. The handler also has a dual purpose - if you register with a handler you can pass that object to mediator.off to remove all of the listeners with that handler. Otherwise the on function will return an id that can be passed to mediator.off to remove that listener.
+
 ## Testing ##
 
 To run tests you need to run plovr. From the root:
@@ -553,7 +654,125 @@ you can then run the tests by going to:
 
     http://localhost:9810
 
+## Experimental ##
+
+This is a section for functionality that has been added but has not had tests written for them or been developed fully. Use these at your own risk as they may change in future.
+
+### two way binding ###
+
+for your control you can setup two way binding like so:
+
+myControl.autobind(selector, template | options)
+
+The selector should work with the controls getEls function. Also it will not setup any setters if the selector is not a class name.
+
+A string can be given with attributes from the model to be populates surrounded by ${...}. for instance:
+
+myControl.autobind(goog.getCssName('-namefield', "{$lastname}, {$firstname}");
+
+or you can pass in an options object which should have the following signature:
+
+{
+  /* if the template is a string then the {$attr} found ill be added to the reqs
+  if it is a function then an object will be passed in with the signature:
+    {model: {
+        // these will be the values from reqs
+      },
+      // the data will be passed in as given in the options
+    }
+  this means if you are using soy templates you can get your attributes like so:
+    {$model['attr']}
+  they are passed in under the model namespace to allow for advanced compilation
+  */
+  template: string | function,
+  /*
+  an array of the attributes to be used from the model
+   */
+  reqs: Array,
+  data: {
+    /*
+      these will be passed in to the template function with the functions given being run with no arguments before placing in the value.
+     */
+    keys: string | Function
+  },
+  /* 
+  use this if you want to add a class when the first req is true, also clicking on the element will toggle the class
+  */
+  onClass: string,
+  /* this complements onClass and is shown if it is not on */
+  offClass: string,
+  noClick: boolean, // will turn off the onClass click binding
+}
+
+there is likely to be more options in future. The autobind will try to bind up input text & select elements (change on blur), elements based on class (onClass used) and checkitems (should use a boolean value from the model). These haven't all been tested and there may be more added. Other elements will only bind the result.
+
+### automatic collection listing ###
+
+will automatically display your elements and keep the display in order. just use this:
+
+myControl.autolist(mvc.Control, opt_el, opt_callback)
+
+the first argument should be a constructor function that inherits from mvc.Control that will be used to display the child model.
+
+the second argument is optional and will set the content element of the control, otherwise it will be put in the container element already given (usually the top element given by myControl.getElement() - though if you change the mvc.Control prototype chain is could be different, more on this in the next section).
+
+The third is a callback that will be passed the content element and is run after any changes to the displayed list.
+
+### custom mvc.Control prototype chain ###
+
+mvc.Control.create can be used to instantiate an mvc.Control with a different prototype chain. This can be useful if you want to use functions from another class in the goog.ui package that inherits from goog.ui.Component. You can create a new control like this:
+
+var myControl = mvc.Control.create(goog.ui.Control, app.MyControl, model, content);
+
+the first parameter is the base you want to use. In this case we're going to use goog.ui.Control instead of goog.ui.Component. The next parameter is our class that inherits from mvc.Control. you can leave this undefined if you wish to have just a generic mvc.Control. Then we add on the arguments we wish to pass, usually the first one will be the model, then anything else goog.ui.Control needs. Keep in mind that you want to pass along all the parameters so if you know you want app.MyControl to have goog.ui.Control in it's prototype chain then you'll need to pass in the content argument:
+
+app.MyControl = function(model, content) {
+  goog.base(this, model, content);
+};
+goog.inherits(app.MyControl, mvc.Control);
+
 ### changelog ###
+
+### v1.0.6 beta ###
+
+- added in new test for setting within a bind, no will not go in to infinite loop
+- added a getFiltered() method for mvc.Collection which will return the original collection with a filter on it
+
+### v1.0.5 beta ###
+
+- router will not run route when added, you can check the routes once the routes are added with router.checkRoutes();
+- mvc.Control has been split out in to mvc.Layout and mvc.Control. mvc.Layout gives extra functionality on top of goog.ui.Component and mvc.Control inherits from it with functions that need a model.
+- you can now use get/set/bind to use properties under an object literal. Fo example you can do things like model.set('address.city', 'San Francisco') which will fire anything you bind to 'address' and 'address.city'.
+
+### v1.0.3 beta ###
+
+#### Warning api change ####
+on mvc.Control, instead of taking a className for it's event handlers (on, once & click) it now takes a selector. To adjust for this just put a '.' or '-' in front of the className. If you are using class compilation you can change your class like so:
+goog.getCssName('myclass') -> goog.getCssName('-myclass');
+
+- two way binding working for text input
+- two way binding can take multiple classes
+- getEls can take an array of selectors
+- can pass in falsey value to getEls for the top element
+- more autobind options
+
+### v1.0.2 beta ###
+
+- autosave models
+- model can get and set multiple attributes
+- lots of mediator improvements
+- two way binding (experimental)
+- aut display of collection (experimental)
+- change mvc.Control prototype (experimental)
+
+### v1.0.1 beta ###
+
+- more tests
+- callbacks for save and dispose functions
+- fixed HTML5 router
+- added boundEvent objects
+- indexOf in collection
+- collention#newModel can take modelType
 
 ### v1.0 beta ###
 

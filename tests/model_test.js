@@ -389,6 +389,45 @@ var testBind = function() {
   assert(ran);
 };
 
+var testBindLive = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var testA;
+  var that;
+  var bindFn = function(a) {
+    ran++;
+    testA = a;
+    that = this;
+  };
+  a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+  assertEquals(that, this);
+  a.set('a', 2);
+  assertEquals(ran, 2);
+  assertEquals(testA, 2);
+};
+
+var testBindUnbind = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var testA;
+  var that;
+  var bindFn = function(a) {
+    ran++;
+    testA = a;
+    that = this;
+  };
+  var bound = a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+  assertEquals(that, this);
+  bound.unbind();
+  a.set('a', 2);
+  assertEquals(ran, 1);
+  assertEquals(testA, 1);
+};
+
 var testBindSchema = function() {
   var a = mvc.Model.create({'a': 1});
   var ran = false;
@@ -442,6 +481,38 @@ var testBindAll = function() {
   assertEquals(this, that);
 };
 
+var testBindAllLive = function() {
+  var a = mvc.Model.create({'a': 1});
+  var ran = 0;
+  var that;
+  var bindFn = function() {
+    ran++;
+    that = this;
+  };
+  a.bind('a', bindFn, this).fire();
+  assertEquals(ran, 1);
+  assertEquals(that, this);
+  a.set('a', 2);
+  assertEquals(ran, 2);
+};
+
+var testBindAllUnbind = function() {
+  var a = mvc.Model.create({'a': 0});
+  var ran = 0;
+  var that;
+  var bindFn = function() {
+    ran++;
+    that = this;
+  };
+  var bound = a.bind('a', bindFn, this);
+  a.set('a', 1);
+  assertEquals(ran, 1);
+  assertEquals(that, this);
+  bound.unbind();
+  a.set('a', 2);
+  assertEquals(ran, 1);
+};
+
 var testUnbindAll = function() {
   //test bound first
   var a = mvc.Model.create({'a': 1});
@@ -480,6 +551,38 @@ var testBindUnload = function() {
   assertEquals(this, that);
 };
 
+var testBindUnloadLive = function() {
+  //test bound first
+  var a = mvc.Model.create({'a': 1});
+  var ran = false;
+  var that;
+  var bindFn = function() {
+    ran = !ran;
+    that = this;
+  };
+  var cancel = a.bindUnload(bindFn, this).fire();
+  // test it ran
+  assert(ran);
+  //test that handler works
+  assertEquals(this, that);
+};
+
+var testBindUnloadUnbind = function() {
+  //test bound first
+  var a = mvc.Model.create({'a': 1});
+  var ran = false;
+  var that;
+  var bindFn = function() {
+    ran = !ran;
+    that = this;
+  };
+  var cancel = a.bindUnload(bindFn, this).unbind;
+  // test it ran
+  assert(!ran);
+  //test that handler works
+  assertNotEquals(this, that);
+};
+
 var testUnbindUnload = function() {
   //test bound first
   var a = mvc.Model.create({'a': 1});
@@ -496,4 +599,53 @@ var testUnbindUnload = function() {
   assertFalse(ran);
 
 };
+
+var testDotPropertySet = function() {
+  var a = new mvc.Model();
+  a.set('a.a', 1);
+  assert(!!a.attr_.a);
+  assertEquals(1, a.attr_.a.a);
+  a.set('a.b', 1);
+  assertEquals(1, a.attr_.a.a);
+  assertEquals(1, a.attr_.a.b);
+};
+
+var testDotPropertyGet = function() {
+  var a = new mvc.Model();
+  a.attr_.a = {a:1};
+  assertEquals(1, a.get('a.a'));
+};
+
+var testDotPropertyBind = function() {
+  var a = new mvc.Model();
+  a.attr_.a = {a:1, b:1};
+  a.change();
+  var bindA = false;
+  var bindAA = false;
+  var bindAB = false;
+  a.bind('a', function() {bindA = true;});
+  a.bind('a.a', function() {bindAA = true;});
+  a.bind('a.b', function() {bindAB = true;});
+  a.set('a.a', 2);
+  assert(bindA);
+  assert(bindAA);
+  assertFalse(bindAB);
+};
+
+var testBindFnWithSetter = function() {
+  var arr = 0, curItem = 0, silent = false;
+  var m = mvc.Model.create({
+    'arr': [1,2,3],
+    'curItem': 0
+  });
+  m.bind('curItem', function() {
+    curItem++;
+    m.set('arr', [4,5], silent);
+  });
+  m.bind('arr', function() { arr++; });
+  m.set('curItem', 1);
+  assertEquals('Should have fired "arr" listener', arr, 1);
+  assertEquals('Should have changed "arr"', m.get('arr').length, 2);
+  assertEquals('Should have fired "curItem" listener', curItem, 1);
+}
 

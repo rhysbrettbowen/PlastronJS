@@ -48,7 +48,7 @@ mvc.Sync.Status = {
  * pass in the json and status (use HTTP status codes) as a number.
  *
  * @param {mvc.Model} model to create.
- * @param {function(Object, number)=} opt_callback optional.
+ * @param {function(Object, number=)=} opt_callback optional.
  */
 mvc.Sync.prototype.create = function(model, opt_callback) {};
 
@@ -59,7 +59,7 @@ mvc.Sync.prototype.create = function(model, opt_callback) {};
  * pass in the json and status (use HTTP status codes) as a number.
  *
  * @param {mvc.Model} model to refresh.
- * @param {function(Object, number)=} opt_callback optional.
+ * @param {function(Object, number=)=} opt_callback optional.
  */
 mvc.Sync.prototype.read = function(model, opt_callback) {};
 
@@ -70,7 +70,7 @@ mvc.Sync.prototype.read = function(model, opt_callback) {};
  * pass in the json and status (use HTTP status codes) as a number.
  *
  * @param {mvc.Model} model to update.
- * @param {function(Object, number)=} opt_callback optional.
+ * @param {function(Object, number=)=} opt_callback optional.
  */
 mvc.Sync.prototype.update = function(model, opt_callback) {};
 

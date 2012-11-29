@@ -76,6 +76,8 @@ mvc.Model = function(opt_options) {
   this.boundAll_ = {};
   this.onUnload_ = [];
 
+  this.autosaver = null;
+
   this.handleErr_ = goog.nullFunction;
 
   this.changeHandler_ = goog.events.listen(this,
@@ -86,7 +88,12 @@ mvc.Model = function(opt_options) {
    */
   this.cid_ = '' + goog.getUid(this);
 
+  this.changing_ = [false];
+  this.waitChange_ = {};
+  this.waitChangeSilent_ = [true];
+
   this.set(defaults['attr']);
+
 
   this.dispatchEvent(goog.events.EventType.LOAD);
 };
@@ -233,7 +240,12 @@ mvc.Model.create = function(opt_options) {
  * @return {!Object} the model as a json - this should probably be overridden.
  */
 mvc.Model.prototype.toJson = function() {
-  return goog.object.clone(this.attr_);
+  var json = goog.object.clone(this.attr_);
+  goog.array.forEach(goog.object.getKeys(json), function(key) {
+    if (!goog.isDef(json[key]))
+      delete json[key];
+  });
+  return json;
 };
 
 
@@ -270,8 +282,10 @@ mvc.Model.prototype.setSync = function(sync) {
  * @param {boolean=} opt_silent whether to fire change event.
  */
 mvc.Model.prototype.reset = function(opt_silent) {
-  this.prev_ = this.attr_;
-  this.attr_ = {};
+  this.prev_ = /** @type {Object} */(goog.object.unsafeClone(this.attr_));
+  goog.array.forEach(goog.object.getKeys(this.prev_), function(key) {
+    this.set(key, undefined, true);
+  }, this);
   if (!opt_silent)
     this.change();
 };
@@ -280,11 +294,17 @@ mvc.Model.prototype.reset = function(opt_silent) {
 /**
  * gets the value for an attribute
  *
- * @param {string} key to get value of.
+ * @param {Array|string} key to get value of.
  * @param {*=} opt_default will return if value is undefined.
  * @return {*} the value of the key.
  */
 mvc.Model.prototype.get = function(key, opt_default) {
+  if(goog.isArray(key)) {
+    return goog.array.reduce(key, function(obj, k) {
+      obj[k] = this.get(k, opt_default);
+      return obj;
+    }, {}, this);
+  }
 
   // if a getter is defined in a schema then use that
   if (this.schema_[key] && this.schema_[key].get) {
@@ -298,7 +318,11 @@ mvc.Model.prototype.get = function(key, opt_default) {
         },this));
     return goog.isDef(get) ? get : opt_default;
   }
-  return goog.isDef(this.attr_[key]) ? this.attr_[key] : opt_default;
+  var path = key.split('.').reverse();
+  var obj = this.attr_;
+  while (path.length && goog.isDef(obj))
+    obj = obj[path.pop()];
+  return goog.isDef(obj) ? obj : opt_default;
 };
 
 
@@ -360,6 +384,17 @@ mvc.Model.prototype.has = function(key) {
  */
 mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
+  if (this.changing_[0]) {
+    if (goog.isString(key)) {
+      this.waitChange_[key] = opt_val;
+      this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_silent;
+    } else {
+      goog.object.extend(this.waitChangeSilent_, key);
+      this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_val;
+    }
+    return;
+  }
+
   // handle key value as string or object
   var success = false;
   if (goog.isString(key)) {
@@ -378,12 +413,36 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
         success = true;
     } else {
       try {
-        if (this.schema_[key] && this.schema_[key].set)
-          this.attr_[key] = goog.bind(
-              this.parseSchemaFn_(this.schema_[key].set), this)(val, this);
-        else
-          this.attr_[key] = val;
-        success = true;
+        if (this.schema_[key] && this.schema_[key].set) {
+          var temp = goog.bind(
+              this.parseSchemaFn_(this.schema_[key].set), this)
+                  (val, opt_silent);
+          this.attr_[key] = temp;
+        } else {
+          var path = key.split('.').reverse();
+          var obj = this.attr_;
+          while (path.length > 1) {
+            var curr = path.pop();
+            obj[curr] = obj[curr] || {};
+            obj = obj[curr];
+          }
+          obj[path.pop()] = val;
+        }
+        var schema = this.schema_[key];
+        var get = this.get(key);
+        var prev = this.prev(key);
+        if (goog.isDef(schema) && goog.isFunction(schema.cmp)) {
+          var cmp = schema.cmp;
+          if (goog.isFunction(cmp) && 
+              !cmp(get, prev)) {
+            success = true;
+          }
+        } else if (goog.isObject(get) || goog.isObject(prev)) {
+          if (!mvc.Model.Compare.RECURSIVE(get, prev))
+            success = true;
+        } else if (get !== prev) {
+          success = true;
+        }
       } catch (err) {
         if (err.isValidateError)
           this.handleErr_(err);
@@ -425,8 +484,6 @@ mvc.Model.prototype.unset = function(key, opt_silent) {
  */
 mvc.Model.prototype.change = function() {
   this.dispatchEvent(goog.events.EventType.CHANGE);
-  this.prev_ = /** @type {Object.<(Object|null)>|null} */
-      (goog.object.unsafeClone(this.attr_));
 };
 
 
@@ -466,6 +523,9 @@ mvc.Model.prototype.alias = function(newName, oldName)  {
     this.schema_[newName] = {};
   this.schema_[newName].get = function(oldName) {
     return oldName;
+  };
+  this.schema_[newName].set = function(val, silent) {
+    this.set(oldName, val, silent);
   };
   this.schema_[newName].require = [oldName];
 };
@@ -529,29 +589,51 @@ mvc.Model.prototype.setter = function(attr, fn) {
  */
 mvc.Model.prototype.getChanges = function() {
 
-  // use schema to look for differences
-  var ret = goog.object.getKeys(goog.object.filter(this.schema_,
-      function(val, key) {
-        var schema = this.schema_[key];
-        if (schema.cmp)
-          return !schema.cmp(this.prev(key), this.get(key));
-        var prev = this.prev(key);
-        if (goog.isArray(prev)) {
-          return !goog.array.equals(prev, this.get(key));
-        }
-        return this.prev(key) != this.get(key);
-      }, this));
+  var schema = this.schema_;
 
-  // look through actual attribute values
-  goog.array.extend(ret, goog.object.getKeys(goog.object.filter(this.attr_,
-      function(val, key) {
-        if (goog.isDef(this.schema_[key]))
-          return false;
-        if (goog.isArray(val)) {
-          return !goog.array.equals(val, this.prev_[key]);
-        }
-        return val !== this.prev_[key];
-      }, this)));
+  var keys = goog.array.concat(goog.object.getKeys(schema),
+      goog.object.getKeys(this.attr_));
+  goog.array.removeDuplicates(keys);
+
+  return goog.array.reduce(keys, function(arr, key) {
+    var prev = this.prev(key);
+    var get = this.get(key);
+    if (schema[key] && schema[key].cmp) {
+      if (!schema[key].cmp(prev, get)) {
+        arr.push(key);
+      }
+      return arr;
+    }
+    return goog.array.concat(arr, this.getObjChanges_(get, prev, key));
+  }, [], this);
+};
+
+/**
+ * returns an array of paths that are different
+ * 
+ * @param {*} a first object
+ * @param {*} b second object
+ * @param {string} path the rooth path
+ * @return {Array.<string>} [description]
+ */
+mvc.Model.prototype.getObjChanges_ = function(a, b, path) {
+  if (!goog.isObject(a) && !goog.isObject(b)) {
+    return a === b ? [] : [path];
+  }
+  var keys = goog.array.concat(goog.object.getKeys(/** @type {Object} */(a)),
+      goog.object.getKeys(/** @type {Object} */(b)));
+  goog.array.removeDuplicates(keys);
+  var ret = goog.array.reduce(keys, function(arr, key) {
+    if (!goog.isObject(a))
+      return goog.array.concat(arr,
+          this.getObjChanges_(undefined, b[key], path + '.' + key));
+    if (!goog.isObject(b))
+      return goog.array.concat(arr,
+          this.getObjChanges_(a[key], undefined, path + '.' + key));
+    return goog.array.concat(arr,
+        this.getObjChanges_(a[key], b[key], path + '.' + key));
+  }, [], this);
+  if (ret.length) ret.push(path);
   return ret;
 };
 
@@ -575,15 +657,17 @@ mvc.Model.prototype.revert = function(opt_silent) {
 
 /**
  * @param {boolean=} opt_sync pass true to del the sync to delete the model.
+ * @param {Function=} opt_callback function to call after sync delete finishes
+ * @override
  */
-mvc.Model.prototype.dispose = function(opt_sync) {
+mvc.Model.prototype.dispose = function(opt_sync, opt_callback) {
   if (opt_sync)
-    this.sync_.del(this);
+    this.sync_.del(this, opt_callback);
   this.dispatchEvent(goog.events.EventType.UNLOAD);
   goog.array.forEach(goog.array.clone(this.onUnload_), function(fn) {
     fn(this);
   }, this);
-  this.disposeInternal();
+  goog.base(this, 'dispose');
 };
 
 
@@ -621,6 +705,32 @@ mvc.Model.prototype.save = function(opt_callback) {
 
 
 /**
+ * sets up auto save on changes
+ * 
+ * @param {string|Array|Function=} opt_vals values to save on. If none provided
+ * will save on any change, if a string hten save only on that key, if an array
+ * then save on any of those changes, if a function it's the callback for any
+ * change save.
+ * @param {Function=} opt_callback for save complete.
+ * @return {{fire: Function, id: number, unbind: Function}|boolean} save binder
+ */
+mvc.Model.prototype.autosave = function(opt_vals, opt_callback) {
+  if(this.autosaver)
+    return false;
+  if(goog.isFunction(opt_vals)) {
+    opt_callback = opt_vals;
+    opt_vals = undefined;
+  }
+  if(!opt_vals)
+    this.autosaver = this.bindAll(goog.bind(this.save, this, opt_callback));
+  else
+    this.autosaver = 
+      this.bind(opt_vals, goog.bind(this.save, this, opt_callback));
+  return this.autosaver;
+};
+
+
+/**
  * can use this to construct setters. For instance if you would set a value
  * like:
  *   model.set('location:latitude', number);
@@ -635,9 +745,9 @@ mvc.Model.prototype.save = function(opt_callback) {
  * or nothing to get the key's value.
  */
 mvc.Model.prototype.getBinder = function(key) {
-  return goog.bind(function(val) {
+  return goog.bind(function(val, opt_silent) {
     if (goog.isDef(val)) {
-      this.set(key, val);
+      this.set(key, val, opt_silent);
     } else {
       return this.get(key);
     }
@@ -652,6 +762,7 @@ mvc.Model.prototype.getBinder = function(key) {
  * @private
  */
 mvc.Model.prototype.change_ = function() {
+  this.changing_[0] = true;
   var changes = this.getChanges();
   goog.array.forEach(this.bound_, function(val) {
     if (goog.array.some(val.attr, function(attr) {
@@ -663,22 +774,40 @@ mvc.Model.prototype.change_ = function() {
           },this)));
     }
   }, this);
-  goog.object.forEach(this.boundAll_, function(val) {
-    val(this);
-  }, this);
+  if (changes.length) {
+    goog.object.forEach(this.boundAll_, function(val) {
+      val(this);
+    }, this);
+  }
+  this.prev_ = /** @type {Object.<(Object|null)>|null} */
+      (goog.object.unsafeClone(this.attr_));
+  this.changing_[0] = false;
+  var clone = goog.object.clone(this.waitChange_);
+  goog.object.clear(this.waitChange_);
+  var silent = this.waitChangeSilent_[0];
+  this.waitChangeSilent_[0] = true;
+  this.set(clone, silent);
 };
 
 
 /**
  * @param {Function} fn function to run when model is disposed.
  * @param {Object=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
   fn = goog.bind(fn, (opt_handler || this));
   var uid = goog.getUid(fn);
   this.onUnload_.push(fn);
-  return uid;
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: uid,
+    unbind: goog.bind(this.unbind, this, uid)
+  };
+  return ret;
 };
 
 
@@ -690,8 +819,8 @@ mvc.Model.prototype.bindUnload = function(fn, opt_handler) {
  *
  * @param {Array|string} name of attributes to listen to.
  * @param {Function} fn function to run when change.
- * @param {*=} opt_handler object for 'this' of function.
- * @return {number} id to use for unbind.
+ * @param {Object=} opt_handler object for 'this' of function.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bind = function(name, fn, opt_handler) {
   if (goog.isString(name))
@@ -703,17 +832,31 @@ mvc.Model.prototype.bind = function(name, fn, opt_handler) {
   };
   bind.cid = goog.getUid(bind);
   this.bound_.push(bind);
-  return bind.cid;
+  var ret = {
+    fire: goog.bind(function() {
+      var get = goog.array.map(/** @type {Array} */(name), function(n) {
+        return this.get(n);
+      }, this);
+      get.push(this);
+      fn.apply(opt_handler || this, get);
+      return ret;
+    }, this),
+    id: bind.cid,
+    unbind: goog.bind(this.unbind, this, bind.cid)
+  };
+  return ret;
 };
 
 
 /**
  * unbind a listener by id
  *
- * @param {number} id returned form bind or bindall.
+ * @param {Object|number} id returned form bind or bindall.
  * @return {boolean} if found and removed.
  */
 mvc.Model.prototype.unbind = function(id) {
+  if(goog.isObject(id) && id.id)
+    id = id.id;
   return goog.array.removeIf(this.bound_, function(bound) {
     return (bound.cid == id);
   }) || goog.object.remove(this.boundAll_, id) ||
@@ -728,13 +871,22 @@ mvc.Model.prototype.unbind = function(id) {
  *
  * @param {Function} fn function to bind.
  * @param {Object=} opt_handler object to bind 'this' to.
- * @return {number} id to use for unbind.
+ * @return {{fire: Function, id: number, unbind: Function}} to unbind.
  */
 mvc.Model.prototype.bindAll = function(fn, opt_handler) {
   var bound = goog.bind(fn, (opt_handler || this));
   var id = goog.getUid(bound);
   goog.object.set(this.boundAll_, '' + id, bound);
-  return id;
+  fn = goog.bind(fn, opt_handler || this, this);
+  var ret = {
+    fire: function() {
+      fn();
+      return ret;
+    },
+    id: id,
+    unbind: goog.bind(this.unbind, this, id)
+  };
+  return ret;
 };
 
 
