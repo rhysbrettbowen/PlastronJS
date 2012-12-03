@@ -1,7 +1,22 @@
-//     (c) 2012 Rhys Brett-Bowen, Catch.com
-//     goog.mvc may be freely distributed under the MIT license.
-//     For all details and documentation:
-//     https://github.com/rhysbrettbowen/goog.mvc
+/*******************************************************************************
+********************************************************************************
+**                                                                            **
+**  Copyright (c) 2012 Catch.com, Inc.                                        **
+**                                                                            **
+**  Licensed under the Apache License, Version 2.0 (the "License");           **
+**  you may not use this file except in compliance with the License.          **
+**  You may obtain a copy of the License at                                   **
+**                                                                            **
+**      http://www.apache.org/licenses/LICENSE-2.0                            **
+**                                                                            **
+**  Unless required by applicable law or agreed to in writing, software       **
+**  distributed under the License is distributed on an "AS IS" BASIS,         **
+**  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  **
+**  See the License for the specific language governing permissions and       **
+**  limitations under the License.                                            **
+**                                                                            **
+********************************************************************************
+*******************************************************************************/
 
 goog.provide('mvc.Model');
 goog.provide('mvc.Model.ValidateError');
@@ -372,10 +387,10 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
       this.waitChange_[key] = opt_val;
       this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_silent;
     } else {
-      goog.object.extend(this.waitChangeSilent_, key);
+      goog.object.extend(this.waitChange_, key);
       this.waitChangeSilent_[0] = this.waitChangeSilent_[0] && opt_val;
     }
-    return;
+    return false;
   }
 
   // handle key value as string or object
