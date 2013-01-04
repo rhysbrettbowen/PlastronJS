@@ -1,22 +1,22 @@
-/*********************************************************************************
-**********************************************************************************
-**                                                                              **
-**  Copyright (c) 2012 Catch.com, Inc.                                          **
-**                                                                              **
-**    Licensed under the Apache License, Version 2.0 (the "License");           **
-**    you may not use this file except in compliance with the License.          **
-**    You may obtain a copy of the License at                                   **
-**                                                                              **
-**        http://www.apache.org/licenses/LICENSE-2.0                            **
-**                                                                              **
-**    Unless required by applicable law or agreed to in writing, software       **
-**    distributed under the License is distributed on an "AS IS" BASIS,         **
-**    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  **
-**    See the License for the specific language governing permissions and       **
-**    limitations under the License.                                            **
-**                                                                              **
-**********************************************************************************
-*********************************************************************************/
+/*******************************************************************************
+********************************************************************************
+**                                                                            **
+**  Copyright (c) 2012 Catch.com, Inc.                                        **
+**                                                                            **
+**  Licensed under the Apache License, Version 2.0 (the "License");           **
+**  you may not use this file except in compliance with the License.          **
+**  You may obtain a copy of the License at                                   **
+**                                                                            **
+**      http://www.apache.org/licenses/LICENSE-2.0                            **
+**                                                                            **
+**  Unless required by applicable law or agreed to in writing, software       **
+**  distributed under the License is distributed on an "AS IS" BASIS,         **
+**  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  **
+**  See the License for the specific language governing permissions and       **
+**  limitations under the License.                                            **
+**                                                                            **
+********************************************************************************
+*******************************************************************************/
 
 goog.provide('mvc.Collection');
 
@@ -49,52 +49,52 @@ mvc.Collection = function(opt_options) {
   goog.object.remove(opt_options, 'models');
 
   /**
-   * @private
-   * @type {Array.<{model:mvc.Model}>}
-   */
+ * @private
+ * @type {Array.<{model:mvc.Model}>}
+ */
   this.models_ = [];
 
   this.comparator_ = [defaults['comparator'] && 
       goog.bind(defaults['comparator'], this)];
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.modelChangeFns_ = [];
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.anyModelChangeFns_ = [];
 
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.addedModels_ = [];
 
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.addedModelsFns_ = [];
 
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.removedModels_ = [];
 
 
   /**
-   * @private
-   * @type {Array}
-   */
+ * @private
+ * @type {Array}
+ */
   this.removedModelsFns_ = [];
 
 
@@ -103,9 +103,9 @@ mvc.Collection = function(opt_options) {
   this.anyModelChange_ = [false];
 
   /**
-   * @private
-   * @type {function(new:mvc.Model, Object=)}
-   */
+ * @private
+ * @type {function(new:mvc.Model, Object=)}
+ */
   this.modelType_ = defaults['modelType'];
 
   goog.base(this, opt_options);

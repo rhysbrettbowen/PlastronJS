@@ -110,6 +110,11 @@ mvc.Filter = {
   /** @this {mvc.Mod} */
   modelChange: function(fn, opt_handler) {
     return mvc.Collection.prototype.modelChange.apply(this, arguments);
+  },
+
+  /** @this {mvc.Mod} */
+  getLength: function() {
+    return this.getModels().length;
   }
 
 };

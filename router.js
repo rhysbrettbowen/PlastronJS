@@ -63,8 +63,8 @@ goog.inherits(mvc.Router, goog.events.EventTarget);
  */
 mvc.Router.EventType = {
   /*
-   * event to trigger when route is about to change.
-   */
+ * event to trigger when route is about to change.
+ */
   ROUTE_EXPIRED: "routeExpired"
 }
 

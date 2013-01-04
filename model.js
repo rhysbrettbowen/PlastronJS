@@ -62,21 +62,21 @@ mvc.Model = function(opt_options) {
 
 
   /**
-   * @private
-   * @type {Object.<string, ?Object>}
-   */
+ * @private
+ * @type {Object.<string, ?Object>}
+ */
   this.attr_ = {};
 
   /**
-   * @private
-   * @type {Object.<{attr: Array.<string>, fn: Function}>}
-   */
+ * @private
+ * @type {Object.<{attr: Array.<string>, fn: Function}>}
+ */
   this.formats_ = {};
 
   /**
-   * @private
-   * @type {Object.<string, ?Object>}
-   */
+ * @private
+ * @type {Object.<string, ?Object>}
+ */
   this.prev_ = {};
 
   /**
@@ -98,9 +98,9 @@ mvc.Model = function(opt_options) {
   this.changeHandler_ = goog.events.listen(this,
       goog.events.EventType.CHANGE, this.change_, false, this);
   /**
-   * @private
-   * @type {string}
-   */
+ * @private
+ * @type {string}
+ */
   this.cid_ = '' + goog.getUid(this);
 
   this.changing_ = [false];
@@ -122,10 +122,10 @@ goog.inherits(mvc.Model, goog.events.EventTarget);
  */
 mvc.Model.Compare = {
   /**
-   * @param {*} a first object to compare.
-   * @param {*} b second object to compare.
-   * @return {boolean} whether they are equal.
-   */
+ * @param {*} a first object to compare.
+ * @param {*} b second object to compare.
+ * @return {boolean} whether they are equal.
+ */
   RECURSIVE: function(a, b) {
 
     // if a and b are objects then recurse through keys and check values
@@ -151,10 +151,10 @@ mvc.Model.Compare = {
     return a === b;
   },
   /**
-   * @param {*} a first object to compare.
-   * @param {*} b second object to compare.
-   * @return {boolean} whether they are equal.
-   */
+ * @param {*} a first object to compare.
+ * @param {*} b second object to compare.
+ * @return {boolean} whether they are equal.
+ */
   STRING: function(a, b) {
     try {
       return a.toString() === b.toString();
@@ -163,10 +163,10 @@ mvc.Model.Compare = {
     }
   },
   /**
-   * @param {*} a first object to compare.
-   * @param {*} b second object to compare.
-   * @return {boolean} whether they are equal.
-   */
+ * @param {*} a first object to compare.
+ * @param {*} b second object to compare.
+ * @return {boolean} whether they are equal.
+ */
   SERIALIZE: function(a, b) {
     return goog.json.serialize(a) === goog.json.serialize(b);
   }
@@ -256,10 +256,20 @@ mvc.Model.create = function(opt_options) {
  */
 mvc.Model.prototype.toJson = function() {
   var json = goog.object.clone(this.attr_);
-  goog.array.forEach(goog.object.getKeys(json), function(key) {
-    if (!goog.isDef(json[key]))
-      delete json[key];
-  });
+
+  var recurseRemove = function(obj) {
+    if (!goog.isObject(obj))
+      return;
+    goog.array.forEach(goog.object.getKeys(obj), function(key) {
+      if (!goog.isDef(obj[key]))
+        delete obj[key];
+      else if (goog.isObject(obj[key]))
+        recurseRemove(obj[key]);
+    });
+  };
+
+  recurseRemove(json);
+
   return json;
 };
 
@@ -316,8 +326,10 @@ mvc.Model.prototype.get = function(key, opt_default) {
         },this));
     return goog.isDef(get) ? get : opt_default;
   }
+  if (key.indexOf('.') < 0)
+    return goog.isDef(this.attr_[key]) ? this.attr_[key] : opt_default;
   var path = key.split('.').reverse();
-  var obj = this.attr_;
+  var obj = this.get(path.pop());
   while (path.length && goog.isDef(obj))
     obj = obj[path.pop()];
   return goog.isDef(obj) ? obj : opt_default;
@@ -405,11 +417,11 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
   // for each key:value try to set using schema else set directly
   goog.object.forEach(key, function(val, key) {
-    if (!goog.isDef(val)) {
-      this.attr_[key] = val;
-      if (this.prev_[key] != this.attr_[key])
-        success = true;
-    } else {
+    // if (!goog.isDef(val)) {
+    //   this.attr_[key] = val;
+    //   if (this.prev_[key] != this.attr_[key])
+    //     success = true;
+    // } else {
       try {
         if (this.schema_[key] && this.schema_[key].set) {
           var temp = goog.bind(
@@ -447,7 +459,7 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
         else
           throw err;
       }
-    }
+    // }
   }, this);
 
   // if it was successful and not silent then fire change and then set
@@ -468,12 +480,22 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
 
 /**
- * @param {string} key to remove (calls to it's get return undefined).
+ * @param {Array|string|boolean=} opt_key to remove (calls to it's get return undefined).
  * @param {boolean=} opt_silent true if no change event should be fired.
  * @return {boolean} return if succesful.
  */
-mvc.Model.prototype.unset = function(key, opt_silent) {
-  return this.set(key, undefined, opt_silent);
+mvc.Model.prototype.unset = function(opt_key, opt_silent) {
+  if (goog.isString(opt_key))
+    return this.set(opt_key, undefined, opt_silent);
+  if (!goog.isArray(opt_key)) {
+    opt_key = goog.object.getKeys(this.attr_);
+  }
+  var temp = {};
+  goog.array.forEach(opt_key, function(k) {
+    temp[k] = undefined;
+  })
+  return this.set(temp, opt_key);
+  
 };
 
 

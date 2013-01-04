@@ -224,17 +224,20 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
       }
     }, this);
   }
-  goog.array.forEach(this.getEls(selector), function(el) {
-    if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
-      el.checked = this.getModel().get(handle.reqs[0]);
-    } 
-  }, this);
+  if (!handle.noCheck)
+    goog.array.forEach(this.getEls(selector), function(el) {
+      if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
+        el.checked = !!this.getModel().get(handle.reqs[0]);
+      } 
+    }, this);
   if (goog.isDef(handle.onClass)) {
     var onClass = handle.onClass;
     goog.array.forEach(this.getEls(selector), function(el) {
-        goog.dom.classes.enable(el, onClass, first);
+        goog.dom.classes.enable(el, onClass,
+            first && first.length !== 0);
         if(handle.offClass)
-          goog.dom.classes.enable(el, handle.offClass, !first);
+          goog.dom.classes.enable(el, handle.offClass,
+              !first || first.length === 0);
     });
   }
   if (handle.reqClass) {
