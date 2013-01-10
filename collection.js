@@ -185,7 +185,7 @@ mvc.Collection.prototype.getFiltered = function(fn) {
  * @return {number} the number of models in the collection.
  */
 mvc.Collection.prototype.getLength = function() {
-  return this.models_.length;
+  return this.getModels().length;
 };
 
 
@@ -406,7 +406,9 @@ mvc.Collection.prototype.setModels = function(arr, opt_silent) {
  */
 mvc.Collection.prototype.at = function(index) {
   try {
-    return this.models_[index < 0 ? this.models_.length + index : index].model;
+    return this.getModels()[index < 0 ?
+        this.getModels().length + index :
+        index];
   } catch (err) {
     return null;
   }
