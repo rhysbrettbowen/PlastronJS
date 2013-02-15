@@ -443,7 +443,7 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
         var prev = this.prev(key);
         if (goog.isDef(schema) && goog.isFunction(schema.cmp)) {
           var cmp = schema.cmp;
-          if (goog.isFunction(cmp) && 
+          if (goog.isFunction(cmp) &&
               !cmp(get, prev)) {
             success = true;
           }
@@ -495,7 +495,7 @@ mvc.Model.prototype.unset = function(opt_key, opt_silent) {
     temp[k] = undefined;
   })
   return this.set(temp, opt_key);
-  
+
 };
 
 
@@ -618,8 +618,9 @@ mvc.Model.prototype.getChanges = function() {
   return goog.array.reduce(keys, function(arr, key) {
     var prev = this.prev(key);
     var get = this.get(key);
-    if (schema[key] && schema[key].cmp) {
-      if (!schema[key].cmp(prev, get)) {
+    var sk = schema[key];
+    if (sk && goog.isDef(sk.cmp)) {
+      if (goog.isDef(sk.cmp) && !sk.cmp(prev, get)) {
         arr.push(key);
       }
       return arr;
@@ -630,7 +631,7 @@ mvc.Model.prototype.getChanges = function() {
 
 /**
  * returns an array of paths that are different
- * 
+ *
  * @param {*} a first object
  * @param {*} b second object
  * @param {string} path the rooth path
@@ -726,7 +727,7 @@ mvc.Model.prototype.save = function(opt_callback) {
 
 /**
  * sets up auto save on changes
- * 
+ *
  * @param {string|Array|Function=} opt_vals values to save on. If none provided
  * will save on any change, if a string hten save only on that key, if an array
  * then save on any of those changes, if a function it's the callback for any
@@ -744,7 +745,7 @@ mvc.Model.prototype.autosave = function(opt_vals, opt_callback) {
   if(!opt_vals)
     this.autosaver = this.bindAll(goog.bind(this.save, this, opt_callback));
   else
-    this.autosaver = 
+    this.autosaver =
       this.bind(opt_vals, goog.bind(this.save, this, opt_callback));
   return this.autosaver;
 };

@@ -46,7 +46,7 @@ goog.inherits(mvc.Control, mvc.Layout);
 
 /**
  * use this to change what mvc.Control inherits from.
- * 
+ *
  * @param {Function} base e.g. goog.ui.Control.
  * @param {Function=} opt_call if you need to instantiate a class other than
  * mvc.Control that inherits from mvc.Control.
@@ -143,7 +143,7 @@ mvc.Control.prototype.setModel = function(model, opt_dontFire) {
 
 /**
  * this will refresh the list whenever there is a change
- * 
+ *
  * @param {function(new:mvc.Control, mvc.Model): undefined} type control to use.
  * @param {Element=} opt_listEl for the list to be put under.
  * @param {Function=} opt_callback to be run once done.
@@ -168,7 +168,7 @@ mvc.Control.prototype.autolist_ = function(type, opt_callback) {
   var removed = goog.array.filter(children, function(child) {
     return !goog.array.contains(models, child.getModel());
   });
-  if (children.length == 0) {
+  if (children.length === 0) {
     goog.array.forEach(models, function(model) {
       var newChild = new type(model);
       this.addChild(newChild, true);
@@ -179,8 +179,9 @@ mvc.Control.prototype.autolist_ = function(type, opt_callback) {
       child.dispose();
     }, this);
     goog.array.forEach(models, function(model, ind) {
+      var child;
       if(!goog.array.contains(childModels, model)) {
-        var child = new type(model);
+        child = new type(model);
         child.createDom();
         this.addChildAt(child, ind, true);
       } else {
@@ -190,13 +191,20 @@ mvc.Control.prototype.autolist_ = function(type, opt_callback) {
         if (this.getChildAt(ind) != child)
           this.addChildAt(child, ind);
       }
-    
+
     }, this);
   }
-  opt_callback && opt_callback.call(this, this.getContentElement());
+  if(opt_callback)
+    opt_callback.call(this, this.getContentElement());
 };
 
 
+/**
+ * runs for a change listened to by autobind
+ * @param {Object} handle
+ * @param {string} selector
+ * @private
+ */
 mvc.Control.prototype.autobindChange_ = function(handle, selector) {
   var args = goog.array.slice(arguments, 2);
   var first = args[0];
@@ -216,7 +224,7 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
         }
       } else if (el.tagName == 'SELECT') {
         goog.array.forEach(el.options, function(opt) {
-          opt.selected = (opt.value == html)
+          opt.selected = (opt.value == html);
         });
       } else {
         goog.dom.removeChildren(el);
@@ -224,11 +232,11 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
       }
     }, this);
   }
-  if (!handle.noCheck)
+  if (!goog.isDef(handle.noCheck))
     goog.array.forEach(this.getEls(selector), function(el) {
       if (el.tagName == 'INPUT' && el.getAttribute('type') == 'checkbox') {
         el.checked = !!this.getModel().get(handle.reqs[0]);
-      } 
+      }
     }, this);
   if (goog.isDef(handle.onClass)) {
     var onClass = handle.onClass;
@@ -260,7 +268,7 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
     goog.array.forEach(this.getEls(selector), function(el) {
       goog.style.showElement(el, handle.show(first));
     });
-  };
+  }
   if (handle.attr) {
     var obj = {};
     obj[handle.attr] = this.getModel().get(handle.reqs[0]);
@@ -270,7 +278,7 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
       else
         el.removeAttribute(handle.attr);
     });
-  };
+  }
   if (handle.then) {
     handle.then.apply(this, goog.array.map(handle.reqs, function(key) {
       return this.getModel().get('key');
@@ -281,7 +289,7 @@ mvc.Control.prototype.autobindChange_ = function(handle, selector) {
 
 /**
  * sets up two way binding based on a class selector and template or handle
- * 
+ *
  * @param {string|Array} selector must be class only for two way binding.
  * @param {string|Object} handle string for a template in the form:
  *
@@ -379,7 +387,7 @@ mvc.Control.prototype.autobind = function(selector, handle, opt_fire) {
       }
     }, selector, this, 30));
   }
-  
+
   var that = this;
   var setHTML = function() {
     this.autobindChange_.apply(this,
@@ -532,7 +540,7 @@ mvc.Control.prototype.bindUnload_ = function(fn, opt_handler) {
 
 /**
  * creates a wrapper around the boundEvent
- * 
+ *
  * @param {Function} fn the function the wrapper should call.
  * @param {Array=} opt_args arguments to pass it.
  * @return {{fire: Function, id: number, unbind: Function}} bind object.
@@ -548,7 +556,7 @@ mvc.Control.prototype.setupBoundEvent_ = function(fn, opt_args) {
     fn: fn,
     args: opt_args || []
   };
-  
+
   this.modelListeners_.push(ret);
 
   return ret;
