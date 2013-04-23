@@ -417,49 +417,45 @@ mvc.Model.prototype.set = function(key, opt_val, opt_silent) {
 
   // for each key:value try to set using schema else set directly
   goog.object.forEach(key, function(val, key) {
-    // if (!goog.isDef(val)) {
-    //   this.attr_[key] = val;
-    //   if (this.prev_[key] != this.attr_[key])
-    //     success = true;
-    // } else {
-      try {
-        if (this.schema_[key] && this.schema_[key].set) {
-          var temp = goog.bind(
-              this.parseSchemaFn_(this.schema_[key].set), this)
-                  (val, opt_silent);
-          this.attr_[key] = temp;
-        } else {
-          var path = key.split('.').reverse();
-          var obj = this.attr_;
-          while (path.length > 1) {
-            var curr = path.pop();
-            obj[curr] = obj[curr] || {};
-            obj = obj[curr];
-          }
-          obj[path.pop()] = val;
-        }
-        var schema = this.schema_[key];
-        var get = this.get(key);
-        var prev = this.prev(key);
-        if (goog.isDef(schema) && goog.isFunction(schema.cmp)) {
-          var cmp = schema.cmp;
-          if (goog.isFunction(cmp) &&
-              !cmp(get, prev)) {
-            success = true;
-          }
-        } else if (goog.isObject(get) || goog.isObject(prev)) {
-          if (!mvc.Model.Compare.RECURSIVE(get, prev))
-            success = true;
-        } else if (get !== prev) {
+    try {
+      // use setter
+      if (this.schema_[key] && this.schema_[key].set) {
+        val = this.parseSchemaFn_(this.schema_[key].set)
+          .call(this, val, opt_silent);
+      }
+      // handle dot delimitted paths
+      var path = key.split('.').reverse();
+      var obj = this.attr_;
+      while (path.length > 1) {
+        var curr = path.pop();
+        obj[curr] = obj[curr] || {};
+        obj = obj[curr];
+      }
+      // set value
+      obj[path.pop()] = val;
+      // test for change
+      var schema = this.schema_[key];
+      var get = this.get(key);
+      var prev = this.prev(key);
+      if (goog.isDef(schema) && goog.isFunction(schema.cmp)) {
+        var cmp = schema.cmp;
+        if (goog.isFunction(cmp) &&
+            !cmp(get, prev)) {
           success = true;
         }
-      } catch (err) {
-        if (err.isValidateError)
-          this.handleErr_(err);
-        else
-          throw err;
+      } else if (goog.isObject(get) || goog.isObject(prev)) {
+        if (!mvc.Model.Compare.RECURSIVE(get, prev))
+          success = true;
+      } else if (get !== prev) {
+        success = true;
       }
-    // }
+    // catch validation errors
+    } catch (err) {
+      if (err.isValidateError)
+        this.handleErr_(err);
+      else
+        throw err;
+    }
   }, this);
 
   // if it was successful and not silent then fire change and then set
@@ -493,7 +489,7 @@ mvc.Model.prototype.unset = function(opt_key, opt_silent) {
   var temp = {};
   goog.array.forEach(opt_key, function(k) {
     temp[k] = undefined;
-  })
+  });
   return this.set(temp, opt_key);
 
 };

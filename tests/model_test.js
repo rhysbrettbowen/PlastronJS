@@ -584,6 +584,29 @@ var testDotPropertySet = function() {
   assertEquals(1, a.attr_.a.b);
 };
 
+var testDotPropertySetSchema = function() {
+  var a = new mvc.Model({
+    'schema': {
+      'a.a' : {
+        set: function(value) {
+          return value;
+        }
+      },
+      'a.b' : {
+        set: function(value) {
+          return value;
+        }
+      }
+    }
+  });
+  a.set('a.a', 1);
+  assert(!!a.attr_.a);
+  assertEquals(1, a.attr_.a.a);
+  a.set('a.b', 1);
+  assertEquals(1, a.attr_.a.a);
+  assertEquals(1, a.attr_.a.b);
+};
+
 var testDotPropertyGet = function() {
   var a = new mvc.Model();
   a.attr_.a = {a:1};
