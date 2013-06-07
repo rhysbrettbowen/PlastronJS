@@ -39,7 +39,7 @@ goog.require('mvc.Sync');
  * schema and sync.
  */
 mvc.Model = function(opt_options) {
-
+  goog.base(this);
   // setup the defaults
   var defaults = {
     'schema': {},

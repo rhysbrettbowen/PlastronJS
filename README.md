@@ -695,7 +695,7 @@ or you can pass in an options object which should have the following signature:
      */
     keys: string | Function
   },
-  /* 
+  /*
   use this if you want to add a class when the first req is true, also clicking on the element will toggle the class
   */
   onClass: string,
@@ -732,6 +732,10 @@ app.MyControl = function(model, content) {
 goog.inherits(app.MyControl, mvc.Control);
 
 ### changelog ###
+
+### v1.0.7 beta ###
+
+- call goog.base (super) for router and model constructor
 
 ### v1.0.6 beta ###
 

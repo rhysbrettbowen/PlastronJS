@@ -44,6 +44,7 @@ goog.require('goog.history.Html5History');
  * document.write.
  */
 mvc.Router = function(opt_noFragment, opt_blankPage, opt_input, opt_iframe) {
+  goog.base(this);
   this.history_ = goog.history.Html5History.isSupported() ?
       new goog.history.Html5History() :
       new goog.History(!!(opt_blankPage && opt_noFragment), opt_blankPage,
@@ -105,8 +106,8 @@ mvc.Router.prototype.route = function(route, fn, opt_context) {
             .replace(/\\\{/g, '(?:')
             .replace(/\\\}/g, ')?') + '$');
   var completeRoute = {
-    route: route, 
-    callback: fn, 
+    route: route,
+    callback: fn,
     context: opt_context
   };
   //this.runRouteIfMatches_(completeRoute, this.currentFragment_);
@@ -134,7 +135,7 @@ mvc.Router.prototype.onChange_ = function() {
   var fragment = this.history_.getToken();
   if (fragment != this.currentFragment_) {
     this.dispatchEvent({
-        type: mvc.Router.EventType.ROUTE_EXPIRED, 
+        type: mvc.Router.EventType.ROUTE_EXPIRED,
         previous: this.currentFragment_,
         current: fragment
     });
