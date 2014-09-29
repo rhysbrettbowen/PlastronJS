@@ -99,7 +99,7 @@ mvc.Router.prototype.getFragment = function() {
 mvc.Router.prototype.route = function(route, fn, opt_context) {
   if (goog.isString(route))
     route = new RegExp('^' + goog.string.regExpEscape(route)
-            .replace(/\\:\w+/g, '(\\w+)')
+            .replace(/\\:\w+/g, '([a-zA-Z0-9._-]+)')
             .replace(/\\\*/g, '(.*)')
             .replace(/\\\[/g, '(')
             .replace(/\\\]/g, ')?')
